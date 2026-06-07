@@ -1,18 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { flattenItems, progressOf, type ContainerNode } from "@/lib/progress";
 import { setPackedForItems } from "@/lib/repo";
+import { containerDragId, itemDragId, zoneDropId } from "@/lib/dnd";
 import type { Category, Container, Item } from "@/lib/types";
 import ProgressBar from "./ProgressBar";
 import ItemRow from "./ItemRow";
 import Menu, { type MenuAction } from "./Menu";
 import QuickAddItem from "./QuickAddItem";
+import GripIcon from "./GripIcon";
 
 interface ContainerSectionProps {
   node: ContainerNode;
   categoriesById: Map<string, Category>;
   filtering: boolean;
+  dndDisabled: boolean;
   depth?: number;
   onAddItem: (containerId: string) => void;
   onAddCube: (bagId: string) => void;
@@ -47,6 +57,7 @@ export default function ContainerSection({
   node,
   categoriesById,
   filtering,
+  dndDisabled,
   depth = 0,
   onAddItem,
   onAddCube,
@@ -56,13 +67,21 @@ export default function ContainerSection({
   onDeleteItem,
 }: ContainerSectionProps) {
   const [open, setOpen] = useState(true);
-  const all = flattenItems(node);
-
-  // When a search/filter is active, hide containers that have no matches.
-  if (filtering && all.length === 0) return null;
-
-  const progress = progressOf(all);
   const { container } = node;
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({
+      id: containerDragId(container.id),
+      data: { type: "container", parentId: container.parentId },
+      disabled: dndDisabled,
+    });
+  const { setNodeRef: setZoneRef } = useDroppable({
+    id: zoneDropId(container.id),
+    data: { type: "zone", containerId: container.id },
+  });
+
+  const all = flattenItems(node);
+  const progress = progressOf(all);
   const isBag = container.kind === "bag";
 
   const itemIds = all.map((i) => i.id);
@@ -93,15 +112,28 @@ export default function ContainerSection({
         { label: "Delete cube", onClick: () => onDeleteContainer(container), danger: true },
       ];
 
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
   return (
     <div
-      className={
-        isBag
-          ? "card p-4"
-          : "rounded-xl border border-slate-200 bg-slate-50/70 p-3"
-      }
+      ref={setNodeRef}
+      style={style}
+      className={`${
+        isBag ? "card p-4" : "rounded-xl border border-slate-200 bg-slate-50/70 p-3"
+      } ${isDragging ? "opacity-60" : ""}`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
+        {!dndDisabled && (
+          <button
+            type="button"
+            className="shrink-0 cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+            aria-label={`Drag ${container.name}`}
+            {...attributes}
+            {...listeners}
+          >
+            <GripIcon />
+          </button>
+        )}
         <button
           onClick={() => setOpen((o) => !o)}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -119,9 +151,7 @@ export default function ContainerSection({
           >
             {container.name}
           </span>
-          {!isBag && (
-            <span className="shrink-0 text-xs text-slate-400">cube</span>
-          )}
+          {!isBag && <span className="shrink-0 text-xs text-slate-400">cube</span>}
         </button>
         <span
           className={`shrink-0 text-xs font-medium ${
@@ -144,35 +174,47 @@ export default function ContainerSection({
 
       {open && (
         <div className="mt-3 space-y-1">
-          {node.children.map((child) => (
-            <ContainerSection
-              key={child.container.id}
-              node={child}
-              categoriesById={categoriesById}
-              filtering={filtering}
-              depth={depth + 1}
-              onAddItem={onAddItem}
-              onAddCube={onAddCube}
-              onEditContainer={onEditContainer}
-              onDeleteContainer={onDeleteContainer}
-              onEditItem={onEditItem}
-              onDeleteItem={onDeleteItem}
-            />
-          ))}
+          <SortableContext
+            items={node.children.map((c) => containerDragId(c.container.id))}
+            strategy={verticalListSortingStrategy}
+          >
+            {node.children.map((child) => (
+              <ContainerSection
+                key={child.container.id}
+                node={child}
+                categoriesById={categoriesById}
+                filtering={filtering}
+                dndDisabled={dndDisabled}
+                depth={depth + 1}
+                onAddItem={onAddItem}
+                onAddCube={onAddCube}
+                onEditContainer={onEditContainer}
+                onDeleteContainer={onDeleteContainer}
+                onEditItem={onEditItem}
+                onDeleteItem={onDeleteItem}
+              />
+            ))}
+          </SortableContext>
 
-          {node.items.map((item) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              category={
-                item.categoryId
-                  ? categoriesById.get(item.categoryId)
-                  : undefined
-              }
-              onEdit={onEditItem}
-              onDelete={onDeleteItem}
-            />
-          ))}
+          <div ref={setZoneRef} className="min-h-[4px] space-y-1">
+            <SortableContext
+              items={node.items.map((i) => itemDragId(i.id))}
+              strategy={verticalListSortingStrategy}
+            >
+              {node.items.map((item) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  category={
+                    item.categoryId ? categoriesById.get(item.categoryId) : undefined
+                  }
+                  onEdit={onEditItem}
+                  onDelete={onDeleteItem}
+                  dndDisabled={dndDisabled}
+                />
+              ))}
+            </SortableContext>
+          </div>
 
           {!filtering && (
             <div className="space-y-1 pt-1">

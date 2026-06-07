@@ -1,14 +1,19 @@
 "use client";
 
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { togglePacked } from "@/lib/repo";
+import { itemDragId } from "@/lib/dnd";
 import type { Category, Item } from "@/lib/types";
 import Menu from "./Menu";
+import GripIcon from "./GripIcon";
 
 interface ItemRowProps {
   item: Item;
   category?: Category;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
+  dndDisabled?: boolean;
 }
 
 export default function ItemRow({
@@ -16,9 +21,37 @@ export default function ItemRow({
   category,
   onEdit,
   onDelete,
+  dndDisabled,
 }: ItemRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({
+      id: itemDragId(item.id),
+      data: { type: "item", containerId: item.containerId },
+      disabled: dndDisabled,
+    });
+
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
   return (
-    <div className="group flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-50">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-slate-50 ${
+        isDragging ? "opacity-50" : ""
+      }`}
+    >
+      {!dndDisabled && (
+        <button
+          type="button"
+          className="-ml-1 shrink-0 cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+          aria-label={`Drag ${item.name}`}
+          {...attributes}
+          {...listeners}
+        >
+          <GripIcon />
+        </button>
+      )}
+
       <button
         role="checkbox"
         aria-checked={item.packed}

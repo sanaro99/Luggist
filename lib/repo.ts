@@ -177,6 +177,38 @@ export async function setPackedForItems(
   await db.items.where("id").anyOf(ids).modify({ packed, updatedAt: now() });
 }
 
+/**
+ * Assigns `containerId` and a sequential `sortOrder` (0..n) to the given items,
+ * in order. Used by drag-and-drop to both reorder within a container and move an
+ * item into a new container in one shot.
+ */
+export async function setItemsOrder(
+  containerId: string | null,
+  orderedItemIds: string[],
+): Promise<void> {
+  if (orderedItemIds.length === 0) return;
+  const ts = now();
+  await db.transaction("rw", db.items, async () => {
+    await Promise.all(
+      orderedItemIds.map((id, index) =>
+        db.items.update(id, { containerId, sortOrder: index, updatedAt: ts }),
+      ),
+    );
+  });
+}
+
+/** Rewrites `sortOrder = index` for the given containers (sibling reorder). */
+export async function reorderContainers(orderedIds: string[]): Promise<void> {
+  if (orderedIds.length === 0) return;
+  await db.transaction("rw", db.containers, async () => {
+    await Promise.all(
+      orderedIds.map((id, index) =>
+        db.containers.update(id, { sortOrder: index }),
+      ),
+    );
+  });
+}
+
 /* ----------------------------- Categories ----------------------------- */
 
 export async function addCategory(name: string, color: string): Promise<string> {

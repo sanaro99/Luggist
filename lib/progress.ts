@@ -69,3 +69,10 @@ export function buildTree(
 export function flattenItems(node: ContainerNode): Item[] {
   return [...node.items, ...node.children.flatMap(flattenItems)];
 }
+
+/** Drops containers that (recursively) hold no items — used while filtering. */
+export function pruneEmpty(nodes: ContainerNode[]): ContainerNode[] {
+  return nodes
+    .map((n) => ({ ...n, children: pruneEmpty(n.children) }))
+    .filter((n) => n.items.length > 0 || n.children.length > 0);
+}

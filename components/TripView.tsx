@@ -4,30 +4,48 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { db } from "@/lib/db";
 import {
   deleteContainer,
   deleteItem,
   deleteTrip,
+  reorderContainers,
+  setItemsOrder,
   setPackedForItems,
 } from "@/lib/repo";
-import { buildTree, progressOf } from "@/lib/progress";
+import { buildTree, progressOf, pruneEmpty } from "@/lib/progress";
 import { formatDateRange } from "@/lib/format";
+import { containerDragId, parseDragId } from "@/lib/dnd";
 import type { Container, ContainerKind, Item } from "@/lib/types";
 import ProgressBar from "./ProgressBar";
 import ContainerSection from "./ContainerSection";
-import ItemRow from "./ItemRow";
+import UnassignedSection from "./UnassignedSection";
 import SearchBar from "./SearchBar";
 import CategoryFilter, { UNCATEGORIZED } from "./CategoryFilter";
-import Menu from "./Menu";
+import Menu, { type MenuAction } from "./Menu";
 import TripForm from "./TripForm";
 import ItemForm from "./ItemForm";
 import ContainerForm from "./ContainerForm";
 import ManageCategories from "./ManageCategories";
 import ConfirmDialog from "./ConfirmDialog";
-import QuickAddItem from "./QuickAddItem";
 import SaveAsTemplate from "./SaveAsTemplate";
-import type { MenuAction } from "./Menu";
 
 export default function TripView({ tripId }: { tripId: string }) {
   const router = useRouter();
@@ -71,6 +89,15 @@ export default function TripView({ tripId }: { tripId: string }) {
     message?: string;
     action: () => void;
   }>({ open: false, title: "", action: () => {} });
+  const [activeDrag, setActiveDrag] = useState<{
+    type: "item" | "container";
+    label: string;
+  } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const categoriesById = useMemo(
     () => new Map((categories ?? []).map((c) => [c.id, c])),
@@ -178,8 +205,83 @@ export default function TripView({ tripId }: { tripId: string }) {
       action: () => void deleteItem(it.id),
     });
 
-  const unassignedProgress = progressOf(tree.unassigned);
   const allItemIds = items.map((i) => i.id);
+  const visibleRoots = filtering ? pruneEmpty(tree.roots) : tree.roots;
+  const rootIds = visibleRoots.map((n) => containerDragId(n.container.id));
+
+  const orderedItemIdsFor = (containerId: string | null): string[] =>
+    items
+      .filter((i) => i.containerId === containerId)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((i) => i.id);
+
+  const handleDragStart = (e: DragStartEvent) => {
+    const a = parseDragId(String(e.active.id));
+    if (a.type === "item") {
+      const it = items.find((i) => i.id === a.id);
+      setActiveDrag(it ? { type: "item", label: it.name } : null);
+    } else if (a.type === "container") {
+      const c = containers.find((x) => x.id === a.id);
+      setActiveDrag(c ? { type: "container", label: c.name } : null);
+    }
+  };
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    setActiveDrag(null);
+    const { active, over } = e;
+    if (!over || String(active.id) === String(over.id)) return;
+    const a = parseDragId(String(active.id));
+    const o = parseDragId(String(over.id));
+
+    if (a.type === "container") {
+      if (o.type !== "container") return;
+      const activeC = containers.find((c) => c.id === a.id);
+      const overC = containers.find((c) => c.id === o.id);
+      if (!activeC || !overC || activeC.parentId !== overC.parentId) return;
+      const siblingIds = containers
+        .filter((c) => c.parentId === activeC.parentId)
+        .sort((x, y) => x.sortOrder - y.sortOrder)
+        .map((c) => c.id);
+      const oldIndex = siblingIds.indexOf(a.id);
+      const newIndex = siblingIds.indexOf(o.id);
+      if (oldIndex < 0 || newIndex < 0) return;
+      reorderContainers(arrayMove(siblingIds, oldIndex, newIndex));
+      return;
+    }
+
+    if (a.type === "item") {
+      const item = items.find((i) => i.id === a.id);
+      if (!item) return;
+      let targetContainerId: string | null;
+      if (o.type === "item") {
+        const overItem = items.find((i) => i.id === o.id);
+        if (!overItem) return;
+        targetContainerId = overItem.containerId;
+      } else if (o.type === "zone") {
+        targetContainerId = o.id === "unassigned" ? null : o.id;
+      } else if (o.type === "container") {
+        targetContainerId = o.id;
+      } else {
+        return;
+      }
+
+      if (item.containerId === targetContainerId) {
+        const ids = orderedItemIdsFor(targetContainerId);
+        const oldIndex = ids.indexOf(a.id);
+        const newIndex = o.type === "item" ? ids.indexOf(o.id) : ids.length - 1;
+        if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+        setItemsOrder(targetContainerId, arrayMove(ids, oldIndex, newIndex));
+      } else {
+        const ids = orderedItemIdsFor(targetContainerId).filter(
+          (id) => id !== a.id,
+        );
+        const insertIndex =
+          o.type === "item" ? Math.max(0, ids.indexOf(o.id)) : ids.length;
+        ids.splice(insertIndex, 0, a.id);
+        setItemsOrder(targetContainerId, ids);
+      }
+    }
+  };
 
   const tripMenuActions: MenuAction[] = [
     { label: "Edit trip", onClick: () => setEditingTrip(true) },
@@ -292,80 +394,66 @@ export default function TripView({ tripId }: { tripId: string }) {
             No items match your search.
           </div>
         ) : (
-          <div className="space-y-3">
-            {tree.roots.map((node) => (
-              <ContainerSection
-                key={node.container.id}
-                node={node}
-                categoriesById={categoriesById}
-                filtering={filtering}
-                onAddItem={(id) => openAddItem(id)}
-                onAddCube={openAddCube}
-                onEditContainer={openEditContainer}
-                onDeleteContainer={askDeleteContainer}
-                onEditItem={openEditItem}
-                onDeleteItem={askDeleteItem}
-              />
-            ))}
-
-            {tree.unassigned.length > 0 && (
-              <div className="card p-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex-1 font-medium text-slate-700">
-                    Unassigned
-                  </span>
-                  <span
-                    className={`text-xs font-medium ${
-                      unassignedProgress.done ? "text-emerald-600" : "text-slate-500"
-                    }`}
-                  >
-                    {unassignedProgress.done
-                      ? "Packed ✓"
-                      : `${unassignedProgress.packed}/${unassignedProgress.total}`}
-                  </span>
-                </div>
-                {unassignedProgress.total > 0 && (
-                  <ProgressBar
-                    packed={unassignedProgress.packed}
-                    total={unassignedProgress.total}
-                    size="sm"
-                    className="mt-2.5"
-                  />
-                )}
-                <div className="mt-3 space-y-1">
-                  {tree.unassigned.map((item) => (
-                    <ItemRow
-                      key={item.id}
-                      item={item}
-                      category={
-                        item.categoryId
-                          ? categoriesById.get(item.categoryId)
-                          : undefined
-                      }
-                      onEdit={openEditItem}
-                      onDelete={askDeleteItem}
-                    />
-                  ))}
-                  {!filtering && (
-                    <QuickAddItem
-                      tripId={tripId}
-                      containerId={null}
-                      onOpenFull={() => openAddItem(null)}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {!filtering && (
-              <button
-                onClick={openAddBag}
-                className="w-full rounded-2xl border-2 border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 transition-colors hover:border-teal-400 hover:text-teal-600"
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveDrag(null)}
+          >
+            <div className="space-y-3">
+              <SortableContext
+                items={rootIds}
+                strategy={verticalListSortingStrategy}
               >
-                ＋ Add bag
-              </button>
-            )}
-          </div>
+                {visibleRoots.map((node) => (
+                  <ContainerSection
+                    key={node.container.id}
+                    node={node}
+                    categoriesById={categoriesById}
+                    filtering={filtering}
+                    dndDisabled={filtering}
+                    onAddItem={(id) => openAddItem(id)}
+                    onAddCube={openAddCube}
+                    onEditContainer={openEditContainer}
+                    onDeleteContainer={askDeleteContainer}
+                    onEditItem={openEditItem}
+                    onDeleteItem={askDeleteItem}
+                  />
+                ))}
+              </SortableContext>
+
+              {tree.unassigned.length > 0 && (
+                <UnassignedSection
+                  tripId={tripId}
+                  items={tree.unassigned}
+                  categoriesById={categoriesById}
+                  filtering={filtering}
+                  dndDisabled={filtering}
+                  onEditItem={openEditItem}
+                  onDeleteItem={askDeleteItem}
+                  onAddFull={() => openAddItem(null)}
+                />
+              )}
+
+              {!filtering && (
+                <button
+                  onClick={openAddBag}
+                  className="w-full rounded-2xl border-2 border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 transition-colors hover:border-teal-400 hover:text-teal-600"
+                >
+                  ＋ Add bag
+                </button>
+              )}
+            </div>
+
+            <DragOverlay>
+              {activeDrag ? (
+                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-lg">
+                  {activeDrag.label}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
 
