@@ -50,16 +50,24 @@ These take precedence over convenience. When in doubt, follow them.
 - **Stack:** Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4.
   Persistence is Dexie over IndexedDB; reactive reads use
   `dexie-react-hooks` `useLiveQuery`.
-- **Data model** (`lib/db.ts`, `lib/types.ts`): four tables — `trips`,
-  `containers`, `items`, `categories`. Bags and packing cubes share the
-  self-referential `containers` table: a bag has `parentId === null`; a cube's
-  `parentId` is its bag. Items reference a `containerId` (or `null` =
+- **Data model** (`lib/db.ts`, `lib/types.ts`): five tables — `trips`,
+  `containers`, `items`, `categories`, `templates`. Bags and packing cubes share
+  the self-referential `containers` table: a bag has `parentId === null`; a
+  cube's `parentId` is its bag. Items reference a `containerId` (or `null` =
   unassigned) and an optional `categoryId`. Categories are global, reused across
-  trips.
-- **Mutations live only in `lib/repo.ts`.** UI components never write to Dexie
-  directly.
+  trips. Bump the Dexie version (currently 2) when changing the schema.
+- **Mutations live only in `lib/repo.ts`** (and `lib/templates.ts` for template
+  save/instantiate). UI components never write to Dexie directly.
+- **Templates** (`lib/templates.ts`): a reusable list is one `templates` row
+  holding a self-contained JSON snapshot — local `tempId`s, categories by *name*
+  (resolved via `getOrCreateCategoryByName` on instantiation), no packed state.
+  Built-in starters seeded by `ensureTemplatesSeeded` (called from `AppInit`).
 - **Derived data** (`lib/progress.ts`): progress math + the bag/cube tree
-  (`buildTree`). Progress is always computed, never stored.
+  (`buildTree`, `pruneEmpty`). Progress is always computed, never stored.
+- **Drag-and-drop** (`@dnd-kit`, `lib/dnd.ts`): one `DndContext` in `TripView`;
+  items and containers are sortable, every container is a drop zone. Ordering
+  persists through `sortOrder` via `setItemsOrder` / `reorderContainers`. DnD is
+  disabled while a search/category filter is active.
 - **Routes:** `app/page.tsx` → `components/TripsHome.tsx` (trips list);
   `app/trips/[tripId]/page.tsx` (awaits `params`) → `components/TripView.tsx`
   (the main packing screen, which orchestrates all the modals).
