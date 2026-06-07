@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
-import { deleteContainer, deleteItem, deleteTrip } from "@/lib/repo";
+import {
+  deleteContainer,
+  deleteItem,
+  deleteTrip,
+  setPackedForItems,
+} from "@/lib/repo";
 import { buildTree, progressOf } from "@/lib/progress";
 import { formatDateRange } from "@/lib/format";
 import type { Container, ContainerKind, Item } from "@/lib/types";
@@ -20,6 +25,8 @@ import ItemForm from "./ItemForm";
 import ContainerForm from "./ContainerForm";
 import ManageCategories from "./ManageCategories";
 import ConfirmDialog from "./ConfirmDialog";
+import QuickAddItem from "./QuickAddItem";
+import type { MenuAction } from "./Menu";
 
 export default function TripView({ tripId }: { tripId: string }) {
   const router = useRouter();
@@ -170,6 +177,29 @@ export default function TripView({ tripId }: { tripId: string }) {
     });
 
   const unassignedProgress = progressOf(tree.unassigned);
+  const allItemIds = items.map((i) => i.id);
+
+  const tripMenuActions: MenuAction[] = [
+    { label: "Edit trip", onClick: () => setEditingTrip(true) },
+    ...(overall.total > 0 && overall.packed < overall.total
+      ? [
+          {
+            label: "Mark all packed",
+            onClick: () => setPackedForItems(allItemIds, true),
+          },
+        ]
+      : []),
+    ...(overall.packed > 0
+      ? [
+          {
+            label: "Mark all unpacked",
+            onClick: () => setPackedForItems(allItemIds, false),
+          },
+        ]
+      : []),
+    { label: "Manage categories", onClick: () => setShowCategories(true) },
+    { label: "Delete trip", onClick: askDeleteTrip, danger: true },
+  ];
 
   return (
     <div>
@@ -193,14 +223,7 @@ export default function TripView({ tripId }: { tripId: string }) {
               {dates && <span>{dates}</span>}
             </p>
           </div>
-          <Menu
-            ariaLabel="Trip options"
-            actions={[
-              { label: "Edit trip", onClick: () => setEditingTrip(true) },
-              { label: "Manage categories", onClick: () => setShowCategories(true) },
-              { label: "Delete trip", onClick: askDeleteTrip, danger: true },
-            ]}
-          />
+          <Menu ariaLabel="Trip options" actions={tripMenuActions} />
         </div>
         {trip.notes && (
           <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
@@ -321,12 +344,11 @@ export default function TripView({ tripId }: { tripId: string }) {
                     />
                   ))}
                   {!filtering && (
-                    <button
-                      className="btn-ghost mt-1"
-                      onClick={() => openAddItem(null)}
-                    >
-                      ＋ Add item
-                    </button>
+                    <QuickAddItem
+                      tripId={tripId}
+                      containerId={null}
+                      onOpenFull={() => openAddItem(null)}
+                    />
                   )}
                 </div>
               </div>

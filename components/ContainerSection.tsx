@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { flattenItems, progressOf, type ContainerNode } from "@/lib/progress";
+import { setPackedForItems } from "@/lib/repo";
 import type { Category, Container, Item } from "@/lib/types";
 import ProgressBar from "./ProgressBar";
 import ItemRow from "./ItemRow";
-import Menu from "./Menu";
+import Menu, { type MenuAction } from "./Menu";
+import QuickAddItem from "./QuickAddItem";
 
 interface ContainerSectionProps {
   node: ContainerNode;
@@ -63,13 +65,30 @@ export default function ContainerSection({
   const { container } = node;
   const isBag = container.kind === "bag";
 
-  const menuActions = isBag
+  const itemIds = all.map((i) => i.id);
+  const bulkActions: MenuAction[] = [];
+  if (progress.total > 0 && progress.packed < progress.total) {
+    bulkActions.push({
+      label: "Mark all packed",
+      onClick: () => setPackedForItems(itemIds, true),
+    });
+  }
+  if (progress.packed > 0) {
+    bulkActions.push({
+      label: "Mark all unpacked",
+      onClick: () => setPackedForItems(itemIds, false),
+    });
+  }
+
+  const menuActions: MenuAction[] = isBag
     ? [
+        ...bulkActions,
         { label: "Add packing cube", onClick: () => onAddCube(container.id) },
         { label: "Edit bag", onClick: () => onEditContainer(container) },
         { label: "Delete bag", onClick: () => onDeleteContainer(container), danger: true },
       ]
     : [
+        ...bulkActions,
         { label: "Edit cube", onClick: () => onEditContainer(container) },
         { label: "Delete cube", onClick: () => onDeleteContainer(container), danger: true },
       ];
@@ -156,10 +175,12 @@ export default function ContainerSection({
           ))}
 
           {!filtering && (
-            <div className="flex flex-wrap gap-1 pt-1">
-              <button className="btn-ghost" onClick={() => onAddItem(container.id)}>
-                ＋ Add item
-              </button>
+            <div className="space-y-1 pt-1">
+              <QuickAddItem
+                tripId={container.tripId}
+                containerId={container.id}
+                onOpenFull={() => onAddItem(container.id)}
+              />
               {isBag && (
                 <button className="btn-ghost" onClick={() => onAddCube(container.id)}>
                   ＋ Add cube
