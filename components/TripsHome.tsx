@@ -6,10 +6,12 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import TripCard from "./TripCard";
 import TripForm from "./TripForm";
+import ManageTemplates from "./ManageTemplates";
 
 export default function TripsHome() {
   const router = useRouter();
   const [showNew, setShowNew] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const trips = useLiveQuery(() =>
     db.trips.orderBy("updatedAt").reverse().toArray(),
@@ -40,9 +42,17 @@ export default function TripsHome() {
             Plan, pack, and track every bag.
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setShowNew(true)}>
-          <span className="text-base leading-none">＋</span> New trip
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn-secondary"
+            onClick={() => setShowTemplates(true)}
+          >
+            Templates
+          </button>
+          <button className="btn-primary" onClick={() => setShowNew(true)}>
+            <span className="text-base leading-none">＋</span> New trip
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -84,6 +94,10 @@ export default function TripsHome() {
         open={showNew}
         onClose={() => setShowNew(false)}
         onCreated={(id) => router.push(`/trips/${id}`)}
+      />
+      <ManageTemplates
+        open={showTemplates}
+        onClose={() => setShowTemplates(false)}
       />
     </div>
   );

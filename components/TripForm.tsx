@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import Modal from "./Modal";
+import { db } from "@/lib/db";
 import { createTrip, updateTrip } from "@/lib/repo";
+import { createTripFromTemplate } from "@/lib/templates";
 import type { Trip } from "@/lib/types";
 
 interface TripFormProps {
@@ -23,6 +26,12 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
   const [startDate, setStartDate] = useState(trip?.startDate ?? "");
   const [endDate, setEndDate] = useState(trip?.endDate ?? "");
   const [notes, setNotes] = useState(trip?.notes ?? "");
+  const [fromTemplateId, setFromTemplateId] = useState("");
+
+  const templates = useLiveQuery(() =>
+    db.templates.orderBy("createdAt").toArray(),
+  );
+  const showTemplatePicker = !trip && (templates?.length ?? 0) > 0;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -36,6 +45,9 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
     };
     if (trip) {
       await updateTrip(trip.id, payload);
+    } else if (fromTemplateId) {
+      const id = await createTripFromTemplate(fromTemplateId, payload);
+      if (id) onCreated?.(id);
     } else {
       const id = await createTrip(payload);
       onCreated?.(id);
@@ -46,6 +58,26 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
   return (
     <Modal open onClose={onClose} title={trip ? "Edit trip" : "New trip"}>
       <form onSubmit={submit} className="space-y-4">
+        {showTemplatePicker && (
+          <div>
+            <label className="label" htmlFor="trip-template">
+              Start from
+            </label>
+            <select
+              id="trip-template"
+              className="input"
+              value={fromTemplateId}
+              onChange={(e) => setFromTemplateId(e.target.value)}
+            >
+              <option value="">Blank trip</option>
+              {templates!.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className="label" htmlFor="trip-name">
             Trip name

@@ -51,3 +51,43 @@ export interface Category {
   color: string;
   sortOrder: number;
 }
+
+/* ------------------------------ Templates ----------------------------- */
+
+/**
+ * A reusable packing list stored as a self-contained snapshot — no live DB ids
+ * leak in. Containers use local `tempId`/`parentTempId`; items reference a
+ * container by `containerTempId` and a category by *name* (so they map onto
+ * whatever global categories exist when the template is instantiated).
+ */
+export interface TemplateContainer {
+  tempId: ID;
+  parentTempId: ID | null;
+  kind: ContainerKind;
+  name: string;
+  color?: string;
+  sortOrder: number;
+}
+
+export interface TemplateItem {
+  name: string;
+  containerTempId: ID | null;
+  categoryName: string | null;
+  quantity: number;
+  notes?: string;
+  sortOrder: number;
+}
+
+export interface TemplateData {
+  containers: TemplateContainer[];
+  items: TemplateItem[];
+}
+
+export interface Template {
+  id: ID;
+  name: string;
+  description?: string;
+  builtIn?: boolean;
+  data: TemplateData;
+  createdAt: number;
+}

@@ -26,6 +26,7 @@ import ContainerForm from "./ContainerForm";
 import ManageCategories from "./ManageCategories";
 import ConfirmDialog from "./ConfirmDialog";
 import QuickAddItem from "./QuickAddItem";
+import SaveAsTemplate from "./SaveAsTemplate";
 import type { MenuAction } from "./Menu";
 
 export default function TripView({ tripId }: { tripId: string }) {
@@ -52,6 +53,7 @@ export default function TripView({ tripId }: { tripId: string }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editingTrip, setEditingTrip] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [itemForm, setItemForm] = useState<{
     open: boolean;
     item?: Item;
@@ -197,6 +199,7 @@ export default function TripView({ tripId }: { tripId: string }) {
           },
         ]
       : []),
+    { label: "Save as template", onClick: () => setShowSaveTemplate(true) },
     { label: "Manage categories", onClick: () => setShowCategories(true) },
     { label: "Delete trip", onClick: askDeleteTrip, danger: true },
   ];
@@ -388,6 +391,12 @@ export default function TripView({ tripId }: { tripId: string }) {
       <ManageCategories
         open={showCategories}
         onClose={() => setShowCategories(false)}
+      />
+      <SaveAsTemplate
+        open={showSaveTemplate}
+        onClose={() => setShowSaveTemplate(false)}
+        tripId={tripId}
+        tripName={trip.name}
       />
       <ConfirmDialog
         open={confirm.open}

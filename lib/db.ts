@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { Trip, Container, Item, Category } from "./types";
+import type { Trip, Container, Item, Category, Template } from "./types";
 
 /**
  * Luggist's local database. IndexedDB does not index `null` values, so
@@ -12,6 +12,7 @@ export class LuggistDB extends Dexie {
   containers!: Table<Container, string>;
   items!: Table<Item, string>;
   categories!: Table<Category, string>;
+  templates!: Table<Template, string>;
 
   constructor() {
     super("luggist");
@@ -20,6 +21,14 @@ export class LuggistDB extends Dexie {
       containers: "id, tripId",
       items: "id, tripId, categoryId",
       categories: "id, sortOrder",
+    });
+    // v2: add reusable templates (additive — existing tables carry over).
+    this.version(2).stores({
+      trips: "id, updatedAt, createdAt",
+      containers: "id, tripId",
+      items: "id, tripId, categoryId",
+      categories: "id, sortOrder",
+      templates: "id, name, createdAt",
     });
   }
 }
