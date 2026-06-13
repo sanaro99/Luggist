@@ -6,6 +6,7 @@ export interface MenuAction {
   label: string;
   onClick: () => void;
   danger?: boolean;
+  icon?: ReactNode;
 }
 
 interface MenuProps {
@@ -34,10 +35,10 @@ export default function Menu({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
         type="button"
-        className="btn-ghost"
+        className="btn btn-circle btn-ghost btn-sm text-base-content/60"
         aria-label={ariaLabel}
         aria-haspopup="menu"
         onClick={(e) => {
@@ -60,7 +61,7 @@ export default function Menu({
           />
           <div
             role="menu"
-            className={`absolute z-50 mt-1 min-w-[170px] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg ${
+            className={`animate-pop absolute z-50 mt-1 min-w-[180px] overflow-hidden rounded-2xl border border-base-300 bg-base-100 p-1.5 shadow-xl ${
               align === "right" ? "right-0" : "left-0"
             }`}
           >
@@ -74,10 +75,17 @@ export default function Menu({
                   setOpen(false);
                   action.onClick();
                 }}
-                className={`block w-full px-4 py-2 text-left text-sm transition-colors hover:bg-slate-50 ${
-                  action.danger ? "text-red-600" : "text-slate-700"
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors ${
+                  action.danger
+                    ? "text-error hover:bg-error/10"
+                    : "text-base-content hover:bg-base-200"
                 }`}
               >
+                {action.icon && (
+                  <span className="shrink-0 text-base-content/50">
+                    {action.icon}
+                  </span>
+                )}
                 {action.label}
               </button>
             ))}

@@ -2,7 +2,9 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import Modal from "./Modal";
+import { useToast } from "./Toaster";
 import { addItem, updateItem } from "@/lib/repo";
+import { categorizeOffline } from "@/lib/ai/client";
 import type { Category, Container, Item } from "@/lib/types";
 
 interface ItemFormProps {
@@ -29,12 +31,17 @@ function ItemFormInner({
   item,
   defaultContainerId = null,
 }: ItemFormProps) {
+  const { toast } = useToast();
   const [name, setName] = useState(item?.name ?? "");
   const [quantity, setQuantity] = useState(item?.quantity ?? 1);
   const [containerId, setContainerId] = useState<string>(
     item?.containerId ?? defaultContainerId ?? "",
   );
   const [categoryId, setCategoryId] = useState<string>(item?.categoryId ?? "");
+  const [notes, setNotes] = useState(item?.notes ?? "");
+  const [weight, setWeight] = useState(
+    item?.weight != null ? String(item.weight) : "",
+  );
 
   // Flat container options with cubes indented under their bag.
   const containerOptions = useMemo(() => {
@@ -54,19 +61,36 @@ function ItemFormInner({
     return opts;
   }, [containers]);
 
+  // Offer a category guess once the user names the item — never overrides a
+  // category they've already chosen. Runs on blur (not an effect) by design.
+  const suggestCategory = () => {
+    if (categoryId || !name.trim()) return;
+    const guess = categorizeOffline(name);
+    if (!guess) return;
+    const match = categories.find(
+      (c) => c.name.toLowerCase() === guess.toLowerCase(),
+    );
+    if (match) setCategoryId(match.id);
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    const weightNum = parseFloat(weight);
     const payload = {
       name: name.trim(),
       quantity: Math.max(1, quantity || 1),
       containerId: containerId || null,
       categoryId: categoryId || null,
+      notes: notes.trim() || undefined,
+      weight: Number.isFinite(weightNum) && weightNum > 0 ? weightNum : undefined,
     };
     if (item) {
       await updateItem(item.id, payload);
+      toast("Item updated");
     } else {
       await addItem(tripId, payload);
+      toast(`Added “${payload.name}”`);
     }
     onClose();
   };
@@ -75,39 +99,56 @@ function ItemFormInner({
     <Modal open onClose={onClose} title={item ? "Edit item" : "Add item"}>
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="label" htmlFor="item-name">
+          <label className="form-label" htmlFor="item-name">
             Item
           </label>
           <input
             id="item-name"
-            className="input"
+            className="input input-bordered w-full"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onBlur={suggestCategory}
             placeholder="e.g. Passport"
             autoFocus
           />
         </div>
-        <div className="grid grid-cols-[5rem_1fr] gap-3">
+        <div className="grid grid-cols-[auto_1fr] items-end gap-3">
           <div>
-            <label className="label" htmlFor="item-qty">
-              Qty
-            </label>
-            <input
-              id="item-qty"
-              type="number"
-              min={1}
-              className="input"
-              value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value, 10) || 1)}
-            />
+            <span className="form-label">Qty</span>
+            <div className="join">
+              <button
+                type="button"
+                className="btn join-item"
+                aria-label="Decrease quantity"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min={1}
+                className="input input-bordered join-item w-14 text-center"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value, 10) || 1)}
+                aria-label="Quantity"
+              />
+              <button
+                type="button"
+                className="btn join-item"
+                aria-label="Increase quantity"
+                onClick={() => setQuantity((q) => q + 1)}
+              >
+                +
+              </button>
+            </div>
           </div>
           <div>
-            <label className="label" htmlFor="item-cat">
+            <label className="form-label" htmlFor="item-cat">
               Category
             </label>
             <select
               id="item-cat"
-              className="input"
+              className="select select-bordered w-full"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
             >
@@ -124,12 +165,29 @@ function ItemFormInner({
           </div>
         </div>
         <div>
-          <label className="label" htmlFor="item-container">
+          <label className="form-label" htmlFor="item-weight">
+            Weight{" "}
+            <span className="font-normal text-base-content/40">(kg, optional)</span>
+          </label>
+          <input
+            id="item-weight"
+            type="number"
+            min={0}
+            step="0.1"
+            inputMode="decimal"
+            className="input input-bordered w-full"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder="e.g. 0.5"
+          />
+        </div>
+        <div>
+          <label className="form-label" htmlFor="item-container">
             Packed in
           </label>
           <select
             id="item-container"
-            className="input"
+            className="select select-bordered w-full"
             value={containerId}
             onChange={(e) => setContainerId(e.target.value)}
           >
@@ -140,7 +198,24 @@ function ItemFormInner({
             ))}
           </select>
         </div>
-        <button type="submit" className="btn-primary w-full" disabled={!name.trim()}>
+        <div>
+          <label className="form-label" htmlFor="item-notes">
+            Notes{" "}
+            <span className="font-normal text-base-content/40">(optional)</span>
+          </label>
+          <textarea
+            id="item-notes"
+            className="textarea textarea-bordered min-h-[60px] w-full resize-y"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. travel size, buy at airport"
+          />
+        </div>
+        <button
+          type="submit"
+          className="btn btn-primary w-full"
+          disabled={!name.trim()}
+        >
           {item ? "Save changes" : "Add item"}
         </button>
       </form>

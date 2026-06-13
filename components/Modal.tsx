@@ -7,10 +7,17 @@ interface ModalProps {
   open: boolean;
   onClose: () => void;
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
 }
 
-export default function Modal({ open, onClose, title, children }: ModalProps) {
+export default function Modal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  children,
+}: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -29,19 +36,31 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-neutral/40 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:max-w-md sm:rounded-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="animate-rise relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-3xl border border-base-300 bg-base-100 shadow-2xl sm:max-w-md sm:rounded-3xl"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-base-200 px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="font-display text-lg font-semibold text-base-content">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="mt-0.5 text-xs text-base-content/60">{subtitle}</p>
+            )}
+          </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="-mr-1 flex h-8 w-8 items-center justify-center rounded-lg text-xl leading-none text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            className="btn btn-circle btn-ghost btn-sm -mr-1 text-lg"
           >
-            ×
+            ✕
           </button>
         </div>
         <div className="overflow-y-auto p-5">{children}</div>

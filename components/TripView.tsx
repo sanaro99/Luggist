@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -23,18 +23,37 @@ import {
 } from "@dnd-kit/sortable";
 import { db } from "@/lib/db";
 import {
+  addItem,
   deleteContainer,
   deleteItem,
   deleteTrip,
   reorderContainers,
   setItemsOrder,
   setPackedForItems,
+  updateItem,
 } from "@/lib/repo";
-import { buildTree, progressOf, pruneEmpty } from "@/lib/progress";
-import { formatDateRange } from "@/lib/format";
+import { getOrCreateCategoryByName } from "@/lib/templates";
+import {
+  aiAudit,
+  aiCategorize,
+  categorizeOffline,
+  type AuditSuggestion,
+} from "@/lib/ai/client";
+import {
+  buildTree,
+  itemComparator,
+  progressOf,
+  pruneEmpty,
+  weightOf,
+  type ItemSort,
+} from "@/lib/progress";
+import { formatDateRange, formatKg } from "@/lib/format";
+import { celebrate } from "@/lib/confetti";
 import { containerDragId, parseDragId } from "@/lib/dnd";
 import type { Container, ContainerKind, Item } from "@/lib/types";
+import { useToast } from "./Toaster";
 import ProgressBar from "./ProgressBar";
+import CountdownBadge from "./CountdownBadge";
 import ContainerSection from "./ContainerSection";
 import UnassignedSection from "./UnassignedSection";
 import SearchBar from "./SearchBar";
@@ -46,9 +65,21 @@ import ContainerForm from "./ContainerForm";
 import ManageCategories from "./ManageCategories";
 import ConfirmDialog from "./ConfirmDialog";
 import SaveAsTemplate from "./SaveAsTemplate";
+import AiGenerateList from "./AiGenerateList";
+import AuditSuggestions from "./AuditSuggestions";
+
+function StatChip({ icon, label }: { icon: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-base-200/70 px-2.5 py-1 text-xs font-medium text-base-content/70">
+      <span aria-hidden>{icon}</span>
+      {label}
+    </span>
+  );
+}
 
 export default function TripView({ tripId }: { tripId: string }) {
   const router = useRouter();
+  const { toast } = useToast();
 
   const trip = useLiveQuery(
     async () => (await db.trips.get(tripId)) ?? null,
@@ -69,9 +100,17 @@ export default function TripView({ tripId }: { tripId: string }) {
   // UI state
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [unpackedOnly, setUnpackedOnly] = useState(false);
+  const [sortMode, setSortMode] = useState<ItemSort>("manual");
   const [editingTrip, setEditingTrip] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
+  const [audit, setAudit] = useState<{
+    open: boolean;
+    loading: boolean;
+    suggestions: AuditSuggestion[];
+  }>({ open: false, loading: false, suggestions: [] });
   const [itemForm, setItemForm] = useState<{
     open: boolean;
     item?: Item;
@@ -114,7 +153,10 @@ export default function TripView({ tripId }: { tripId: string }) {
   }, [items]);
 
   const query = search.trim().toLowerCase();
-  const filtering = query !== "" || selected.size > 0;
+  // A reduced item set (search / category / unpacked-only) prunes empties and
+  // hides quick-add; any of these — or a non-manual sort — also pauses DnD.
+  const filtered = query !== "" || selected.size > 0 || unpackedOnly;
+  const dndDisabled = filtered || sortMode !== "manual";
 
   const filteredItems = useMemo(() => {
     return (items ?? []).filter((it) => {
@@ -122,14 +164,27 @@ export default function TripView({ tripId }: { tripId: string }) {
       if (selected.size > 0 && !selected.has(it.categoryId ?? UNCATEGORIZED)) {
         return false;
       }
+      if (unpackedOnly && it.packed) return false;
       return true;
     });
-  }, [items, query, selected]);
+  }, [items, query, selected, unpackedOnly]);
 
   const tree = useMemo(
-    () => buildTree(containers ?? [], filteredItems),
-    [containers, filteredItems],
+    () => buildTree(containers ?? [], filteredItems, itemComparator(sortMode)),
+    [containers, filteredItems, sortMode],
   );
+
+  // Fire the celebration when the trip flips to fully packed.
+  const allPacked =
+    !!items && items.length > 0 && items.every((i) => i.packed);
+  const wasAllPacked = useRef(false);
+  useEffect(() => {
+    if (allPacked && !wasAllPacked.current) {
+      celebrate();
+      toast("Everything packed! Bon voyage 🎉", { icon: "🎉", duration: 3400 });
+    }
+    wasAllPacked.current = allPacked;
+  }, [allPacked, toast]);
 
   // Loading / not-found
   if (
@@ -140,17 +195,18 @@ export default function TripView({ tripId }: { tripId: string }) {
   ) {
     return (
       <div className="space-y-3">
-        <div className="card h-32 animate-pulse bg-slate-100" />
-        <div className="card h-24 animate-pulse bg-slate-100" />
+        <div className="skeleton h-40 rounded-3xl" />
+        <div className="skeleton h-12 rounded-2xl" />
+        <div className="skeleton h-28 rounded-3xl" />
       </div>
     );
   }
 
   if (trip === null) {
     return (
-      <div className="card px-6 py-16 text-center">
-        <p className="text-slate-600">This trip could not be found.</p>
-        <Link href="/" className="btn-primary mt-5 inline-flex">
+      <div className="card border border-base-300/70 bg-base-100/80 px-6 py-16 text-center backdrop-blur">
+        <p className="text-base-content/70">This trip could not be found.</p>
+        <Link href="/" className="btn btn-primary mt-5 inline-flex w-fit self-center">
           Back to trips
         </Link>
       </div>
@@ -158,8 +214,11 @@ export default function TripView({ tripId }: { tripId: string }) {
   }
 
   const overall = progressOf(items);
+  const totalWeight = weightOf(items);
   const dates = formatDateRange(trip.startDate, trip.endDate);
   const isEmpty = containers.length === 0 && items.length === 0;
+  const bagCount = containers.filter((c) => c.kind === "bag").length;
+  const cubeCount = containers.filter((c) => c.kind === "cube").length;
 
   const toggleCategory = (id: string) =>
     setSelected((prev) => {
@@ -187,6 +246,7 @@ export default function TripView({ tripId }: { tripId: string }) {
       message: `"${trip.name}" and all of its bags, cubes and items will be permanently removed.`,
       action: async () => {
         await deleteTrip(tripId);
+        toast("Trip deleted", { tone: "info", icon: "🗑️" });
         router.push("/");
       },
     });
@@ -205,8 +265,91 @@ export default function TripView({ tripId }: { tripId: string }) {
       action: () => void deleteItem(it.id),
     });
 
+  // Coarse season hint from the start month; the model also gets the
+  // destination, so it can correct for hemisphere.
+  const seasonOf = (iso?: string): string | undefined => {
+    if (!iso) return undefined;
+    const m = new Date(`${iso}T00:00:00`).getMonth();
+    if (m <= 1 || m === 11) return "winter";
+    if (m <= 4) return "spring";
+    if (m <= 7) return "summer";
+    return "autumn";
+  };
+
+  // B2: ask the model what's missing. State is set in this event handler
+  // (never an effect), so the modal stays purely presentational.
+  const runAudit = async () => {
+    setAudit({ open: true, loading: true, suggestions: [] });
+    const res = await aiAudit({
+      destination: trip.destination,
+      season: seasonOf(trip.startDate),
+      existingNames: items.map((i) => i.name),
+    });
+    if (res.ok) {
+      setAudit({ open: true, loading: false, suggestions: res.data });
+    } else {
+      setAudit({ open: false, loading: false, suggestions: [] });
+      toast(res.error, { tone: "info", icon: "🤖" });
+    }
+  };
+
+  const addSuggestion = async (s: AuditSuggestion) => {
+    const categoryId = s.categoryName
+      ? await getOrCreateCategoryByName(s.categoryName)
+      : null;
+    await addItem(tripId, { name: s.name, categoryId });
+    setAudit((a) => ({
+      ...a,
+      suggestions: a.suggestions.filter((x) => x.name !== s.name),
+    }));
+    toast(`Added “${s.name}”`);
+  };
+
+  // B4 AI batch: tidy up items with no category. Offline keyword map first,
+  // model only for the leftovers it couldn't classify.
+  const autoCategorize = async () => {
+    const uncategorized = items.filter((i) => !i.categoryId);
+    if (uncategorized.length === 0) {
+      toast("Everything's already categorized", { tone: "info", icon: "🏷️" });
+      return;
+    }
+    let done = 0;
+    const remaining: Item[] = [];
+    for (const it of uncategorized) {
+      const guess = categorizeOffline(it.name);
+      if (guess) {
+        await updateItem(it.id, {
+          categoryId: await getOrCreateCategoryByName(guess),
+        });
+        done++;
+      } else {
+        remaining.push(it);
+      }
+    }
+    if (remaining.length > 0) {
+      const res = await aiCategorize(remaining.map((i) => i.name));
+      if (res.ok) {
+        for (const it of remaining) {
+          const cat = res.data[it.name.toLowerCase()];
+          if (cat) {
+            await updateItem(it.id, {
+              categoryId: await getOrCreateCategoryByName(cat),
+            });
+            done++;
+          }
+        }
+      }
+    }
+    toast(
+      done > 0
+        ? `Categorized ${done} ${done === 1 ? "item" : "items"}`
+        : "Couldn't auto-categorize those",
+      { tone: done > 0 ? "success" : "info", icon: "🏷️" },
+    );
+  };
+
   const allItemIds = items.map((i) => i.id);
-  const visibleRoots = filtering ? pruneEmpty(tree.roots) : tree.roots;
+  const visibleRoots = filtered ? pruneEmpty(tree.roots) : tree.roots;
   const rootIds = visibleRoots.map((n) => containerDragId(n.container.id));
 
   const orderedItemIdsFor = (containerId: string | null): string[] =>
@@ -283,13 +426,23 @@ export default function TripView({ tripId }: { tripId: string }) {
     }
   };
 
+  const hasUncategorized = items.some((i) => !i.categoryId);
   const tripMenuActions: MenuAction[] = [
     { label: "Edit trip", onClick: () => setEditingTrip(true) },
+    { label: "✨ Generate with AI", onClick: () => setShowGenerate(true) },
+    ...(items.length > 0
+      ? [{ label: "What am I forgetting?", onClick: runAudit }]
+      : []),
+    ...(hasUncategorized
+      ? [{ label: "Auto-categorize items", onClick: autoCategorize }]
+      : []),
     ...(overall.total > 0 && overall.packed < overall.total
       ? [
           {
             label: "Mark all packed",
-            onClick: () => setPackedForItems(allItemIds, true),
+            onClick: () => {
+              setPackedForItems(allItemIds, true);
+            },
           },
         ]
       : []),
@@ -297,7 +450,10 @@ export default function TripView({ tripId }: { tripId: string }) {
       ? [
           {
             label: "Mark all unpacked",
-            onClick: () => setPackedForItems(allItemIds, false),
+            onClick: () => {
+              setPackedForItems(allItemIds, false);
+              toast("Unpacked everything", { tone: "info", icon: "↩️" });
+            },
           },
         ]
       : []),
@@ -310,19 +466,19 @@ export default function TripView({ tripId }: { tripId: string }) {
     <div>
       <Link
         href="/"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
+        className="mb-3 inline-flex items-center gap-1 text-sm text-base-content/55 transition-colors hover:text-base-content"
       >
         ← All trips
       </Link>
 
       {/* Trip header */}
-      <div className="card p-5">
+      <div className="card animate-rise border border-base-300/70 bg-base-100/90 p-5 shadow-sm backdrop-blur">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold tracking-tight text-slate-900">
+            <h1 className="font-display truncate text-2xl font-semibold tracking-tight text-base-content">
               {trip.name}
             </h1>
-            <p className="mt-0.5 text-sm text-slate-500">
+            <p className="mt-0.5 text-sm text-base-content/55">
               {trip.destination && <span>📍 {trip.destination}</span>}
               {trip.destination && dates && <span className="mx-1.5">·</span>}
               {dates && <span>{dates}</span>}
@@ -330,17 +486,35 @@ export default function TripView({ tripId }: { tripId: string }) {
           </div>
           <Menu ariaLabel="Trip options" actions={tripMenuActions} />
         </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <CountdownBadge start={trip.startDate} end={trip.endDate} />
+          <StatChip icon="🧳" label={`${bagCount} ${bagCount === 1 ? "bag" : "bags"}`} />
+          {cubeCount > 0 && (
+            <StatChip icon="🧦" label={`${cubeCount} ${cubeCount === 1 ? "cube" : "cubes"}`} />
+          )}
+          <StatChip icon="📦" label={`${overall.total} ${overall.total === 1 ? "item" : "items"}`} />
+          {totalWeight > 0 && <StatChip icon="⚖️" label={formatKg(totalWeight)} />}
+        </div>
+
         {trip.notes && (
-          <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
+          <p className="mt-3 whitespace-pre-wrap break-words rounded-2xl bg-base-200/60 p-3 text-sm text-base-content/70">
             {trip.notes}
           </p>
         )}
+
         <div className="mt-4 flex items-center gap-3">
           <ProgressBar packed={overall.packed} total={overall.total} className="flex-1" />
-          <span className="whitespace-nowrap text-sm font-medium text-slate-600">
+          <span
+            className={`font-display whitespace-nowrap text-sm font-semibold ${
+              overall.done ? "text-success" : "text-base-content/70"
+            }`}
+          >
             {overall.total === 0
               ? "No items yet"
-              : `${overall.packed}/${overall.total} · ${overall.pct}%`}
+              : overall.done
+                ? "All packed ✓"
+                : `${overall.packed}/${overall.total} · ${overall.pct}%`}
           </span>
         </div>
       </div>
@@ -348,13 +522,42 @@ export default function TripView({ tripId }: { tripId: string }) {
       {/* Toolbar */}
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <SearchBar value={search} onChange={setSearch} />
-        <button className="btn-primary" onClick={() => openAddItem(null)}>
+        <button className="btn btn-primary" onClick={() => openAddItem(null)}>
           ＋ Item
         </button>
-        <button className="btn-secondary" onClick={openAddBag}>
+        <button className="btn btn-ghost border border-base-300" onClick={openAddBag}>
           ＋ Bag
         </button>
       </div>
+
+      {/* Filters / sort */}
+      {!isEmpty && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-base-content/70">
+            <input
+              type="checkbox"
+              className="toggle toggle-primary toggle-sm"
+              checked={unpackedOnly}
+              onChange={(e) => setUnpackedOnly(e.target.checked)}
+            />
+            Unpacked only
+          </label>
+          <label className="ml-auto flex items-center gap-2 text-sm text-base-content/70">
+            <span>Sort</span>
+            <select
+              className="select select-bordered select-sm rounded-full"
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as ItemSort)}
+              aria-label="Sort items"
+            >
+              <option value="manual">Manual</option>
+              <option value="az">A – Z</option>
+              <option value="packed">Packed last</option>
+            </select>
+          </label>
+        </div>
+      )}
+
       {categories.length > 0 && (
         <div className="mt-3">
           <CategoryFilter
@@ -370,28 +573,37 @@ export default function TripView({ tripId }: { tripId: string }) {
       {/* Body */}
       <div className="mt-4">
         {isEmpty ? (
-          <div className="card flex flex-col items-center justify-center px-6 py-14 text-center">
-            <span className="text-4xl" aria-hidden>
-              📦
-            </span>
-            <h2 className="mt-3 font-semibold text-slate-900">
-              Start your packing list
-            </h2>
-            <p className="mt-1 max-w-xs text-sm text-slate-500">
-              Add a bag to organize your packing, or jump straight to adding items.
-            </p>
-            <div className="mt-5 flex gap-2">
-              <button className="btn-primary" onClick={openAddBag}>
-                Add a bag
-              </button>
-              <button className="btn-secondary" onClick={() => openAddItem(null)}>
-                Add an item
-              </button>
+          <div className="card animate-rise border border-base-300/70 bg-base-100/80 backdrop-blur">
+            <div className="card-body items-center px-6 py-14 text-center">
+              <span className="animate-float text-5xl" aria-hidden>
+                📦
+              </span>
+              <h2 className="font-display mt-3 text-lg font-semibold text-base-content">
+                Start your packing list
+              </h2>
+              <p className="mt-1 max-w-xs text-sm text-base-content/60">
+                Add a bag to organize your packing, or jump straight to adding
+                items.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowGenerate(true)}
+                >
+                  ✨ Generate with AI
+                </button>
+                <button className="btn btn-ghost border border-base-300" onClick={openAddBag}>
+                  Add a bag
+                </button>
+                <button className="btn btn-ghost border border-base-300" onClick={() => openAddItem(null)}>
+                  Add an item
+                </button>
+              </div>
             </div>
           </div>
-        ) : filtering && filteredItems.length === 0 ? (
-          <div className="card px-6 py-12 text-center text-sm text-slate-500">
-            No items match your search.
+        ) : filtered && filteredItems.length === 0 ? (
+          <div className="card border border-base-300/70 bg-base-100/70 px-6 py-12 text-center text-sm text-base-content/60 backdrop-blur">
+            No items match your filters.
           </div>
         ) : (
           <DndContext
@@ -411,8 +623,8 @@ export default function TripView({ tripId }: { tripId: string }) {
                     key={node.container.id}
                     node={node}
                     categoriesById={categoriesById}
-                    filtering={filtering}
-                    dndDisabled={filtering}
+                    filtering={filtered}
+                    dndDisabled={dndDisabled}
                     onAddItem={(id) => openAddItem(id)}
                     onAddCube={openAddCube}
                     onEditContainer={openEditContainer}
@@ -428,18 +640,18 @@ export default function TripView({ tripId }: { tripId: string }) {
                   tripId={tripId}
                   items={tree.unassigned}
                   categoriesById={categoriesById}
-                  filtering={filtering}
-                  dndDisabled={filtering}
+                  filtering={filtered}
+                  dndDisabled={dndDisabled}
                   onEditItem={openEditItem}
                   onDeleteItem={askDeleteItem}
                   onAddFull={() => openAddItem(null)}
                 />
               )}
 
-              {!filtering && (
+              {!filtered && (
                 <button
                   onClick={openAddBag}
-                  className="w-full rounded-2xl border-2 border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 transition-colors hover:border-teal-400 hover:text-teal-600"
+                  className="w-full rounded-3xl border-2 border-dashed border-base-300 py-3 text-sm font-medium text-base-content/55 transition-colors hover:border-primary/50 hover:text-primary"
                 >
                   ＋ Add bag
                 </button>
@@ -448,7 +660,7 @@ export default function TripView({ tripId }: { tripId: string }) {
 
             <DragOverlay>
               {activeDrag ? (
-                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-lg">
+                <div className="rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm font-medium text-base-content shadow-xl">
                   {activeDrag.label}
                 </div>
               ) : null}
@@ -485,6 +697,19 @@ export default function TripView({ tripId }: { tripId: string }) {
         onClose={() => setShowSaveTemplate(false)}
         tripId={tripId}
         tripName={trip.name}
+      />
+      <AiGenerateList
+        open={showGenerate}
+        onClose={() => setShowGenerate(false)}
+        trip={trip}
+        hasItems={items.length > 0}
+      />
+      <AuditSuggestions
+        open={audit.open}
+        onClose={() => setAudit((a) => ({ ...a, open: false }))}
+        loading={audit.loading}
+        suggestions={audit.suggestions}
+        onAdd={addSuggestion}
       />
       <ConfirmDialog
         open={confirm.open}

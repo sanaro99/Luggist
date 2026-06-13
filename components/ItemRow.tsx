@@ -36,14 +36,14 @@ export default function ItemRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-slate-50 ${
+      className={`group flex items-center gap-2 rounded-xl px-2 py-2 transition-colors hover:bg-base-200/70 ${
         isDragging ? "opacity-50" : ""
       }`}
     >
       {!dndDisabled && (
         <button
           type="button"
-          className="-ml-1 shrink-0 cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+          className="-ml-1 shrink-0 cursor-grab touch-none text-base-content/25 hover:text-base-content/50 active:cursor-grabbing"
           aria-label={`Drag ${item.name}`}
           {...attributes}
           {...listeners}
@@ -52,42 +52,39 @@ export default function ItemRow({
         </button>
       )}
 
-      <button
-        role="checkbox"
-        aria-checked={item.packed}
-        aria-label={item.packed ? `Mark ${item.name} unpacked` : `Mark ${item.name} packed`}
-        onClick={() => togglePacked(item.id)}
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-          item.packed
-            ? "border-emerald-500 bg-emerald-500 text-white"
-            : "border-slate-300 bg-white hover:border-teal-400"
-        }`}
-      >
-        {item.packed && (
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-            <path
-              d="M2.5 6.5 5 9l4.5-5"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
-      </button>
+      <input
+        type="checkbox"
+        checked={item.packed}
+        onChange={() => togglePacked(item.id)}
+        aria-label={
+          item.packed ? `Mark ${item.name} unpacked` : `Mark ${item.name} packed`
+        }
+        className="checkbox checkbox-success checkbox-sm shrink-0 rounded-md"
+      />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span
-            className={`truncate text-sm ${
-              item.packed ? "text-slate-400 line-through" : "text-slate-800"
+            className={`truncate text-sm transition-colors ${
+              item.packed
+                ? "text-base-content/40 line-through"
+                : "text-base-content"
             }`}
           >
             {item.name}
           </span>
           {item.quantity > 1 && (
-            <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-500">
+            <span className="badge badge-sm shrink-0 border-0 bg-base-200 font-medium text-base-content/60">
               ×{item.quantity}
+            </span>
+          )}
+          {item.notes && (
+            <span
+              className="shrink-0 cursor-default text-xs text-base-content/35"
+              title={item.notes}
+              aria-label={`Note: ${item.notes}`}
+            >
+              📝
             </span>
           )}
         </div>
@@ -99,7 +96,7 @@ export default function ItemRow({
             className="h-2 w-2 rounded-full"
             style={{ backgroundColor: category.color }}
           />
-          <span className="text-xs text-slate-400">{category.name}</span>
+          <span className="text-xs text-base-content/50">{category.name}</span>
         </span>
       )}
 

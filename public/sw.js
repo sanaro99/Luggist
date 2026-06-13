@@ -3,7 +3,7 @@
 // fully offline. Strategy: network-first for navigations, stale-while-revalidate
 // for same-origin GET assets.
 
-const CACHE = "luggist-v1";
+const CACHE = "luggist-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

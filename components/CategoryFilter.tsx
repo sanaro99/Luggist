@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { Category } from "@/lib/types";
 
 export const UNCATEGORIZED = "__uncategorized__";
@@ -25,13 +26,13 @@ export default function CategoryFilter({
   if (visible.length === 0 && uncategorized === 0) return null;
 
   return (
-    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-0.5">
       <button
         onClick={onClear}
-        className={`shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+        className={`badge badge-lg shrink-0 cursor-pointer gap-1 border-0 font-medium transition-colors ${
           selected.size === 0
-            ? "bg-teal-600 text-white"
-            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            ? "bg-primary text-primary-content"
+            : "bg-base-200 text-base-content/70 hover:bg-base-300"
         }`}
       >
         All
@@ -42,11 +43,18 @@ export default function CategoryFilter({
           <button
             key={cat.id}
             onClick={() => onToggle(cat.id)}
-            style={active ? { backgroundColor: `${cat.color}22` } : undefined}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+            style={
               active
-                ? "text-slate-800 ring-1 ring-inset"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? ({
+                    backgroundColor: `color-mix(in oklch, ${cat.color} 22%, transparent)`,
+                    boxShadow: `inset 0 0 0 1.5px ${cat.color}`,
+                  } as CSSProperties)
+                : undefined
+            }
+            className={`badge badge-lg shrink-0 cursor-pointer gap-1.5 border-0 font-medium transition-colors ${
+              active
+                ? "text-base-content"
+                : "bg-base-200 text-base-content/70 hover:bg-base-300"
             }`}
           >
             <span
@@ -54,27 +62,21 @@ export default function CategoryFilter({
               style={{ backgroundColor: cat.color }}
             />
             {cat.name}
-            <span className="text-xs text-slate-400">{counts.get(cat.id)}</span>
+            <span className="opacity-60">{counts.get(cat.id)}</span>
           </button>
         );
       })}
       {uncategorized > 0 && (
         <button
           onClick={() => onToggle(UNCATEGORIZED)}
-          className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+          className={`badge badge-lg shrink-0 cursor-pointer gap-1.5 border-0 font-medium transition-colors ${
             selected.has(UNCATEGORIZED)
-              ? "bg-slate-700 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              ? "bg-neutral text-neutral-content"
+              : "bg-base-200 text-base-content/70 hover:bg-base-300"
           }`}
         >
           Uncategorized
-          <span
-            className={`text-xs ${
-              selected.has(UNCATEGORIZED) ? "text-slate-300" : "text-slate-400"
-            }`}
-          >
-            {uncategorized}
-          </span>
+          <span className="opacity-60">{uncategorized}</span>
         </button>
       )}
     </div>
