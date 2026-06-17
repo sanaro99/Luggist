@@ -6,7 +6,10 @@ Guidance for working in this repo. Read this first.
 
 Luggist is an **offline-first packing-tracker PWA**: create trips, add bags and
 packing cubes, assign items, and track packing progress. All data is local
-(IndexedDB) — no backend, no accounts.
+(IndexedDB) — no accounts, no cloud sync. The one server-side piece is an
+**optional AI gateway** (`app/api/ai`) powering the AI-assist features;
+everything else runs in the browser, and the AI features degrade to offline
+heuristics when no provider key is configured.
 
 ## How I want you to work (priorities)
 
@@ -44,6 +47,10 @@ These take precedence over convenience. When in doubt, follow them.
   worker / offline behavior (the SW only registers in production).
 - `npm run lint` — ESLint. `npx tsc --noEmit` — type-check only.
 - `node scripts/gen-icons.mjs` — regenerate the PWA icons.
+- **AI features** need a provider configured: copy `.env.example` → `.env.local`
+  and set `AI_API_KEY` (default provider Mistral). Local Ollama works key-free
+  (`AI_PROVIDER=ollama`). Without config, the app still runs — AI-assist falls
+  back to offline heuristics.
 
 ## Architecture
 
@@ -54,14 +61,29 @@ These take precedence over convenience. When in doubt, follow them.
   `containers`, `items`, `categories`, `templates`. Bags and packing cubes share
   the self-referential `containers` table: a bag has `parentId === null`; a
   cube's `parentId` is its bag. Items reference a `containerId` (or `null` =
-  unassigned) and an optional `categoryId`. Categories are global, reused across
-  trips. Bump the Dexie version (currently 2) when changing the schema.
+  unassigned) and an optional `categoryId`. Optional `Item.weight` and
+  `Container.weightLimit` (kg) drive weight tracking. Categories are global,
+  reused across trips. Bump the Dexie version (currently 3) when changing the
+  schema; adding non-indexed optional fields needs no upgrade callback.
 - **Mutations live only in `lib/repo.ts`** (and `lib/templates.ts` for template
   save/instantiate). UI components never write to Dexie directly.
 - **Templates** (`lib/templates.ts`): a reusable list is one `templates` row
   holding a self-contained JSON snapshot — local `tempId`s, categories by *name*
   (resolved via `getOrCreateCategoryByName` on instantiation), no packed state.
   Built-in starters seeded by `ensureTemplatesSeeded` (called from `AppInit`).
+  `applyTemplateData(tripId, data)` populates a trip from a `TemplateData`
+  snapshot and is reused by the AI list generator (B1).
+- **AI gateway** (`app/api/ai/route.ts`, `lib/ai/*`): one Node route, one
+  `switch` over tasks (`generateList`, `audit`, `parseQuickAdd`, `categorize`).
+  Provider config is **env-only** (`AI_PROVIDER` / `AI_MODEL` / `AI_BASE_URL` /
+  `AI_API_KEY`; see `.env.example`), default Mistral. `lib/ai/chat.ts` dispatches
+  to a client adapter; Mistral/OpenAI/DeepSeek/Ollama all share the
+  `openai-compatible` adapter (official `openai` SDK with a swapped `baseURL`).
+  Add a non-compatible provider (Anthropic, Gemini) by registering a new
+  `AdapterId` + adapter — nothing else changes. `lib/ai/client.ts` is the only
+  AI module a client component imports (it just `fetch`es `/api/ai`) and holds
+  the offline heuristics (`parseQuickAddOffline`, `categorizeOffline`) so
+  quick-add and auto-categorize keep working with no key/network.
 - **Derived data** (`lib/progress.ts`): progress math + the bag/cube tree
   (`buildTree`, `pruneEmpty`). Progress is always computed, never stored.
 - **Drag-and-drop** (`@dnd-kit`, `lib/dnd.ts`): one `DndContext` in `TripView`;
@@ -85,10 +107,11 @@ These take precedence over convenience. When in doubt, follow them.
   while open (outer guard component + a `…Inner` that holds the hooks), so state
   initializes from props — never sync `setState` inside an effect (Next 16 lints
   that as an error: `react-hooks/set-state-in-effect`).
-- **Styling.** Reuse the component classes in `app/globals.css`
-  (`.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.input`, `.label`, `.card`).
-  Add new shared patterns there instead of repeating utility strings. Accent is
-  teal; the app is light-mode only.
+- **Styling.** The UI is built on **DaisyUI** classes (`btn btn-primary`,
+  `input input-bordered`, `select select-bordered`, `textarea textarea-bordered`,
+  `badge`, `card`, `form-label`) plus the shared patterns in `app/globals.css` —
+  match the surrounding components. Both light and dark themes ship (toggled via
+  `ThemeToggle`, persisted in `localStorage`).
 - **PWA.** Manifest is `app/manifest.ts`; the service worker is `public/sw.js`
   and registers only in production (`ServiceWorkerRegister.tsx`). Bump the
   `CACHE` version in `sw.js` when you change cached assets.

@@ -1,32 +1,32 @@
-// Server-only. The single OpenAI-compatible chat call used by the AI gateway,
-// plus a robust JSON extraction so local models that ignore json mode still work.
+// Server-only. The dispatcher the AI gateway calls: resolves config, routes to
+// the right provider adapter, then extracts JSON from the reply (shared across
+// adapters so local models that ignore json mode still work).
 // NEVER import this from a client component.
 
-import { resolveConfig } from "./providers";
+import { resolveConfig, type AdapterId, type AiConfig } from "./providers";
+import { AiError } from "./errors";
+import {
+  completeOpenAICompatible,
+  type ChatArgs,
+} from "./adapters/openai-compatible";
 
-/** Raised when the gateway can't fulfil a request; `status` maps to HTTP. */
-export class AiError extends Error {
-  status: number;
-  constructor(message: string, status = 502) {
-    super(message);
-    this.name = "AiError";
-    this.status = status;
-  }
-}
+// Re-export so existing importers (the route) can keep `from "@/lib/ai/chat"`.
+export { AiError } from "./errors";
 
-interface ChatArgs {
-  system: string;
-  user: string;
-}
+/** An adapter turns a config + prompt into the raw text reply from a provider. */
+type Adapter = (cfg: AiConfig, args: ChatArgs) => Promise<string>;
+
+const ADAPTERS: Record<AdapterId, Adapter> = {
+  "openai-compatible": completeOpenAICompatible,
+};
 
 /**
- * Calls the configured `/chat/completions` endpoint and returns the parsed JSON
- * from the model's reply. Throws `AiError` (with an HTTP status) on any failure.
+ * Calls the configured provider and returns parsed JSON from the model's reply.
+ * Throws `AiError` (with an HTTP status) on any failure.
  */
-export async function callChatJson<T = unknown>({
-  system,
-  user,
-}: ChatArgs): Promise<T> {
+export async function callChatJson<T = unknown>(
+  args: ChatArgs,
+): Promise<T> {
   const cfg = resolveConfig();
   if (cfg.needsApiKey && !cfg.apiKey) {
     throw new AiError(
@@ -35,46 +35,12 @@ export async function callChatJson<T = unknown>({
     );
   }
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
-
-  const body: Record<string, unknown> = {
-    model: cfg.model,
-    temperature: 0.3,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-  };
-  if (cfg.jsonMode) body.response_format = { type: "json_object" };
-
-  let res: Response;
-  try {
-    res = await fetch(`${cfg.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    throw new AiError(
-      `Couldn't reach the AI provider (${cfg.provider}). ${(err as Error).message}`,
-      503,
-    );
+  const adapter = ADAPTERS[cfg.adapter];
+  if (!adapter) {
+    throw new AiError(`No AI adapter registered for "${cfg.adapter}".`, 500);
   }
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new AiError(
-      `AI provider returned ${res.status}. ${detail.slice(0, 300)}`.trim(),
-      502,
-    );
-  }
-
-  const data = (await res.json().catch(() => null)) as {
-    choices?: { message?: { content?: string } }[];
-  } | null;
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new AiError("The AI returned an empty response.", 502);
+  const content = await adapter(cfg, args);
 
   const parsed = extractJson<T>(content);
   if (parsed === undefined) {

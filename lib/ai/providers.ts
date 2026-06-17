@@ -7,6 +7,15 @@
 
 export type ProviderId = "mistral" | "openai" | "deepseek" | "ollama";
 
+/**
+ * Which client adapter speaks to a provider. The four providers below all use
+ * the OpenAI-compatible `/chat/completions` protocol, so they share one adapter
+ * (the official `openai` SDK with a swapped base URL). A provider that doesn't
+ * speak that protocol (e.g. Anthropic, Gemini) can add a new adapter id here and
+ * a matching entry in the ADAPTERS map in `chat.ts` — nothing else changes.
+ */
+export type AdapterId = "openai-compatible";
+
 interface ProviderDef {
   baseUrl: string;
   defaultModel: string;
@@ -14,6 +23,7 @@ interface ProviderDef {
   jsonMode: boolean;
   /** Local providers (Ollama) don't need an API key. */
   needsApiKey: boolean;
+  adapter: AdapterId;
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
@@ -22,24 +32,28 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     defaultModel: "mistral-small-latest",
     jsonMode: true,
     needsApiKey: true,
+    adapter: "openai-compatible",
   },
   openai: {
     baseUrl: "https://api.openai.com/v1",
     defaultModel: "gpt-4o-mini",
     jsonMode: true,
     needsApiKey: true,
+    adapter: "openai-compatible",
   },
   deepseek: {
     baseUrl: "https://api.deepseek.com/v1",
     defaultModel: "deepseek-chat",
     jsonMode: true,
     needsApiKey: true,
+    adapter: "openai-compatible",
   },
   ollama: {
     baseUrl: "http://localhost:11434/v1",
     defaultModel: "llama3.1",
     jsonMode: false,
     needsApiKey: false,
+    adapter: "openai-compatible",
   },
 };
 
@@ -50,6 +64,7 @@ export interface AiConfig {
   apiKey: string;
   jsonMode: boolean;
   needsApiKey: boolean;
+  adapter: AdapterId;
 }
 
 function isProviderId(v: string | undefined): v is ProviderId {
@@ -68,5 +83,6 @@ export function resolveConfig(): AiConfig {
     apiKey: process.env.AI_API_KEY?.trim() || "",
     jsonMode: def.jsonMode,
     needsApiKey: def.needsApiKey,
+    adapter: def.adapter,
   };
 }
