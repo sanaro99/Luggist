@@ -1,0 +1,28 @@
+# Keep the build context small and secret-free.
+node_modules
+.next
+out
+build
+npm-debug.log*
+
+# Never bake secrets into the image (AI_API_KEY etc. are injected at runtime).
+.env
+.env.*
+!.env.example
+
+# VCS / tooling / editor cruft
+.git
+.gitignore
+.github
+.claude
+.vscode
+*.tsbuildinfo
+
+# Docs and local-only files
+Dockerfile
+.dockerignore
+docker-compose*.yml
+README.md
+PRD.md
+AGENTS.md
+CLAUDE.md
