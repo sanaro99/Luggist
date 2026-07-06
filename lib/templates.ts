@@ -68,19 +68,19 @@ export async function saveTripAsTemplate(
   return id;
 }
 
-/** Creates a brand-new trip from a template. Items start unpacked. */
-export async function createTripFromTemplate(
-  templateId: string,
-  tripInput: TripInput,
-): Promise<string | null> {
-  const template = await db.templates.get(templateId);
-  if (!template) return null;
-
-  const tripId = await createTrip(tripInput);
+/**
+ * Populates an existing trip from a self-contained `TemplateData` snapshot —
+ * creating bags/cubes (parent-first) and items, resolving categories by name.
+ * Used by both template instantiation and the AI list generator.
+ */
+export async function applyTemplateData(
+  tripId: string,
+  data: TemplateData,
+): Promise<void> {
   const realByTemp = new Map<string, string>();
 
   // Create containers parent-first so cubes can resolve their bag.
-  for (const c of orderParentFirst(template.data.containers)) {
+  for (const c of orderParentFirst(data.containers)) {
     const parentRealId = c.parentTempId
       ? realByTemp.get(c.parentTempId) ?? null
       : null;
@@ -88,7 +88,7 @@ export async function createTripFromTemplate(
     realByTemp.set(c.tempId, newId);
   }
 
-  for (const it of template.data.items) {
+  for (const it of data.items) {
     const categoryId = it.categoryName
       ? await getOrCreateCategoryByName(it.categoryName)
       : null;
@@ -103,7 +103,18 @@ export async function createTripFromTemplate(
       notes: it.notes,
     });
   }
+}
 
+/** Creates a brand-new trip from a template. Items start unpacked. */
+export async function createTripFromTemplate(
+  templateId: string,
+  tripInput: TripInput,
+): Promise<string | null> {
+  const template = await db.templates.get(templateId);
+  if (!template) return null;
+
+  const tripId = await createTrip(tripInput);
+  await applyTemplateData(tripId, template.data);
   return tripId;
 }
 

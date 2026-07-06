@@ -26,6 +26,8 @@ export interface Container {
   kind: ContainerKind;
   name: string;
   color?: string;
+  /** Optional weight limit in kg; meaningful for bags only (warns when exceeded). */
+  weightLimit?: number;
   sortOrder: number;
   createdAt: number;
 }
@@ -39,6 +41,8 @@ export interface Item {
   quantity: number;
   packed: boolean;
   notes?: string;
+  /** Optional per-item weight in kg (counted per unit, i.e. × quantity). */
+  weight?: number;
   sortOrder: number;
   createdAt: number;
   updatedAt: number;

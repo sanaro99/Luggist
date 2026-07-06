@@ -1,0 +1,1402 @@
+[
+  {
+    "id": "TC001",
+    "title": "Bulk mark all items packed and complete the trip",
+    "description": "This verifies that a traveler can use the trip menu to mark everything packed, reach full completion, and see the completion celebration.",
+    "category": "Item Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip"
+      },
+      {
+        "type": "action",
+        "description": "Open the trip menu"
+      },
+      {
+        "type": "action",
+        "description": "Choose to mark all items packed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the packing progress reaches 100 percent"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the completion celebration is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Bulk mark all items packed and reach completion",
+    "description": "This verifies that a user can mark every item packed from the trip menu and see the trip complete at 100 percent.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created trip"
+      },
+      {
+        "type": "action",
+        "description": "Add a new bag to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Add two new items to the bag"
+      },
+      {
+        "type": "action",
+        "description": "Use the trip menu to mark all items as packed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip reaches full packing progress"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the completion celebration is shown"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "All items packed shows completion celebration",
+    "description": "This test verifies that packing every item in a trip reaches 100% and shows the completion celebration.",
+    "category": "Packing Progress Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add multiple items to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Mark every item as packed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip reaches 100% packed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the completion celebration is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Add items to a trip and pack them",
+    "description": "This verifies that a traveler can add items, mark them packed, and see the trip and container progress update accordingly.",
+    "category": "Item Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip"
+      },
+      {
+        "type": "action",
+        "description": "Add an item"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a required item name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the quantity field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the form"
+      },
+      {
+        "type": "action",
+        "description": "Mark the item as packed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the item is displayed in the trip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the packed progress updates"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Track packing progress as items are packed and unpacked",
+    "description": "This verifies that packing and unpacking items updates both item state and overall trip progress correctly.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created trip"
+      },
+      {
+        "type": "action",
+        "description": "Add a new bag to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Add two new items to the bag"
+      },
+      {
+        "type": "action",
+        "description": "Mark one item as packed"
+      },
+      {
+        "type": "action",
+        "description": "Mark the same item as unpacked"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip progress reflects the current packed state"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the item remains available in the trip"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Create a new trip and open it",
+    "description": "This verifies that a traveler can create a trip from the dashboard and immediately open the newly created trip detail view.",
+    "category": "Trip Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open trip creation"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a required trip name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the destination field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid start date"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid end date"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the notes field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new trip is displayed in the trip list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip details view is open"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Create a trip from the dashboard",
+    "description": "This test verifies that a traveler can create a new trip from the home dashboard and open it for planning.",
+    "category": "Packing Progress Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip is created and the trip detail view opens"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip shows an empty packing progress state"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Create a new trip and view it on the trip page",
+    "description": "This verifies that a traveler can create a trip from the dashboard and open the created trip to begin organizing items.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created trip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip detail view is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip starts with no packed items"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Add containers and items to a trip",
+    "description": "This test verifies that a traveler can add a bag, add a packing cube, and add items into the trip so the packing structure is ready to use.",
+    "category": "Packing Progress Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add a bag to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Add a packing cube inside the bag"
+      },
+      {
+        "type": "action",
+        "description": "Add an item to the bag or cube"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the bag, cube, and item are displayed in the trip"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Packed progress increases as items are checked off",
+    "description": "This test verifies that packing items updates the trip progress and container progress in real time.",
+    "category": "Packing Progress Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add a bag to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Add an item to the bag"
+      },
+      {
+        "type": "action",
+        "description": "Mark the item as packed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip progress increases and the container progress updates"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Add a bag and a packing cube to a trip",
+    "description": "This verifies that an organizer can create a bag and nest a packing cube inside it so the trip structure updates correctly.",
+    "category": "Bag and Packing Cube Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip"
+      },
+      {
+        "type": "action",
+        "description": "Add a bag"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a bag name"
+      },
+      {
+        "type": "action",
+        "description": "Submit the form"
+      },
+      {
+        "type": "action",
+        "description": "Open the bag actions"
+      },
+      {
+        "type": "action",
+        "description": "Add a packing cube inside the bag"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a cube name"
+      },
+      {
+        "type": "action",
+        "description": "Submit the form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the bag is displayed in the trip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the cube is nested under the bag"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "Open an existing trip from the dashboard",
+    "description": "This verifies that a traveler can choose an existing trip from the home dashboard and reach its trip details page.",
+    "category": "Trip Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip list is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip details view is open"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "Use a template to create a new trip",
+    "description": "This verifies that a repeat traveler can start a new trip from a template and receive a prefilled unpacked packing list.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the template library"
+      },
+      {
+        "type": "action",
+        "description": "Select a template to preview"
+      },
+      {
+        "type": "action",
+        "description": "Choose to use the template"
+      },
+      {
+        "type": "action",
+        "description": "Create the new trip from the template"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new trip is populated with containers and items"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the imported items are initially unpacked"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "Bulk mark all items packed from trip options",
+    "description": "This test verifies that a traveler can use the trip menu to pack every item at once and update the trip to fully packed.",
+    "category": "Bulk Pack and Unpack",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add multiple items to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Open the trip options menu"
+      },
+      {
+        "type": "action",
+        "description": "Choose to mark all items packed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify every item in the trip is marked as packed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip reaches 100% packed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC015",
+    "title": "View dashboard stats on the home screen",
+    "description": "This verifies that a traveler can open the home dashboard and see their trip summary stats and upcoming trip information.",
+    "category": "Trip Dashboard and Stats",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dashboard stats are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify upcoming trip information is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC016",
+    "title": "Quick add an item into a specific container",
+    "description": "This verifies that a traveler can rapidly create an item inside a bag or cube without leaving the trip view.",
+    "category": "Item Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip"
+      },
+      {
+        "type": "action",
+        "description": "Open a container section"
+      },
+      {
+        "type": "action",
+        "description": "Use quick add in the container"
+      },
+      {
+        "type": "action",
+        "description": "Enter an item name"
+      },
+      {
+        "type": "action",
+        "description": "Submit the quick add"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new item appears in the selected container"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC017",
+    "title": "Quick add items into a specific container",
+    "description": "This verifies that a traveler can efficiently add items directly into a chosen bag or cube while working inside an existing trip.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created trip"
+      },
+      {
+        "type": "action",
+        "description": "Add a new bag to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Add a packing cube inside the bag"
+      },
+      {
+        "type": "action",
+        "description": "Quick add a new item into the packing cube"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new item appears inside the selected container"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the container count is updated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC018",
+    "title": "Edit trip details",
+    "description": "This verifies that a traveler can update an existing trip's information and see the revised trip details saved in place.",
+    "category": "Trip Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip"
+      },
+      {
+        "type": "action",
+        "description": "Open the trip options"
+      },
+      {
+        "type": "action",
+        "description": "Choose to edit the trip"
+      },
+      {
+        "type": "action",
+        "description": "Update the trip name"
+      },
+      {
+        "type": "action",
+        "description": "Update the destination field"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated trip information is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC019",
+    "title": "Search trips by name or destination",
+    "description": "This verifies that a traveler can search the trip list on the home dashboard and see only matching trips.",
+    "category": "Trip Dashboard and Stats",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the trip search field with a unique trip name or destination"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify matching trips are displayed in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify non-matching trips are hidden from the list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC020",
+    "title": "Search and filter items in a trip",
+    "description": "This verifies that a traveler can narrow a trip’s items by keyword, category, packed state, and sort mode to find what they need.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created trip"
+      },
+      {
+        "type": "action",
+        "description": "Add several items with different names and categories"
+      },
+      {
+        "type": "action",
+        "description": "Search for one of the item keywords"
+      },
+      {
+        "type": "action",
+        "description": "Apply a category filter"
+      },
+      {
+        "type": "action",
+        "description": "Apply a packed-state filter"
+      },
+      {
+        "type": "action",
+        "description": "Change the sort mode"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the visible items are filtered and sorted according to the selected controls"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC021",
+    "title": "Delete a trip from the dashboard",
+    "description": "This verifies that a traveler can delete a trip after confirming the action and see it removed from the trip list.",
+    "category": "Trip Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip's options"
+      },
+      {
+        "type": "action",
+        "description": "Choose to delete the trip"
+      },
+      {
+        "type": "action",
+        "description": "Confirm deletion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip is removed from the trip list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC022",
+    "title": "Reorder items and containers by drag and drop",
+    "description": "This verifies that a user can manually organize a trip by dragging items within and between containers and reordering containers themselves.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created trip"
+      },
+      {
+        "type": "action",
+        "description": "Add two bags to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Add two items to the first bag"
+      },
+      {
+        "type": "action",
+        "description": "Drag the second item above the first item"
+      },
+      {
+        "type": "action",
+        "description": "Drag one bag next to the other bag to reorder containers"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the item order is updated"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the container order is updated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC023",
+    "title": "Use a matching search to find a trip quickly",
+    "description": "This verifies that a repeat traveler can use the dashboard search to locate a specific saved trip by name or destination.",
+    "category": "Trip Dashboard and Stats",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the trip search field with a known trip name or destination"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the expected trip is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip list is narrowed to matching results"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC024",
+    "title": "Search and filter items, then return to manual organization",
+    "description": "This verifies that a repeat traveler can narrow items by search, category, packed state, and sort mode, then clear filters and reorganize items normally.",
+    "category": "Trip Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip"
+      },
+      {
+        "type": "action",
+        "description": "Search for matching items by keyword"
+      },
+      {
+        "type": "action",
+        "description": "Filter items by category"
+      },
+      {
+        "type": "action",
+        "description": "Filter items by packed state"
+      },
+      {
+        "type": "action",
+        "description": "Change the sort mode"
+      },
+      {
+        "type": "action",
+        "description": "Clear the filters"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the filtered item set is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip returns to a manually organized item view"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC025",
+    "title": "Search items by keyword",
+    "description": "This test verifies that a traveler can search within a trip and see the item list narrow to matching items.",
+    "category": "Search and Category Filtering",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add multiple items with different names"
+      },
+      {
+        "type": "action",
+        "description": "Type a keyword into the search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify only matching items are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC026",
+    "title": "Observe dashboard stats update after creating a trip",
+    "description": "This verifies that a traveler can create a trip from the dashboard and see the home stats reflect the new trip.",
+    "category": "Trip Dashboard and Stats",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid trip name"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new trip appears in the trip list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard trip count updates"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC027",
+    "title": "Browse templates and create a trip from one",
+    "description": "This test verifies that a repeat traveler can browse templates from the dashboard and start a new trip from a reusable packing list.",
+    "category": "Packing Progress Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the templates area"
+      },
+      {
+        "type": "action",
+        "description": "Choose a template to use for a new trip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a new trip is created from the selected template"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC028",
+    "title": "Browse a template and create a new trip from it",
+    "description": "This verifies that a repeat traveler can preview an existing template and use it to start a new trip with reusable packing structure.",
+    "category": "Trip Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the templates area"
+      },
+      {
+        "type": "action",
+        "description": "Open a template preview"
+      },
+      {
+        "type": "action",
+        "description": "Use the template to create a new trip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new trip is created"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the trip includes template-based packing structure"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC029",
+    "title": "Save a trip as a reusable template",
+    "description": "This verifies that a traveler can snapshot the current packing list as a template for reuse later.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created trip"
+      },
+      {
+        "type": "action",
+        "description": "Add a new bag to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Add one item to the bag"
+      },
+      {
+        "type": "action",
+        "description": "Open the trip options"
+      },
+      {
+        "type": "action",
+        "description": "Choose to save the current packing list as a template"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a new template name"
+      },
+      {
+        "type": "action",
+        "description": "Save the template"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the template is available in the template library"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC030",
+    "title": "Container progress is shown for each bag and cube",
+    "description": "This test verifies that each bag or cube shows its own packed count and progress independent of the overall trip.",
+    "category": "Packing Progress Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add a bag to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Add a packing cube inside the bag"
+      },
+      {
+        "type": "action",
+        "description": "Add items to both containers"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify each container shows its own packed count and progress"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC031",
+    "title": "Edit and delete a container",
+    "description": "This verifies that an organizer can rename or recolor a bag or cube and can delete it while keeping the trip organization consistent.",
+    "category": "Bag and Packing Cube Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing trip"
+      },
+      {
+        "type": "action",
+        "description": "Open a bag or cube's actions"
+      },
+      {
+        "type": "action",
+        "description": "Choose to edit the container"
+      },
+      {
+        "type": "action",
+        "description": "Update the container name"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "action",
+        "description": "Open the same container's actions"
+      },
+      {
+        "type": "action",
+        "description": "Choose to delete the container"
+      },
+      {
+        "type": "action",
+        "description": "Confirm deletion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the container is removed from the trip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify any items from the deleted container are shown as unassigned"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC032",
+    "title": "Create, edit, and delete a category",
+    "description": "This verifies that an organizer can manage reusable global categories for packing items across trips.",
+    "category": "Category Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Open category management"
+      },
+      {
+        "type": "action",
+        "description": "Add a new category with a name and color"
+      },
+      {
+        "type": "action",
+        "description": "Select the newly created category"
+      },
+      {
+        "type": "action",
+        "description": "Edit the category name or color"
+      },
+      {
+        "type": "action",
+        "description": "Save the category changes"
+      },
+      {
+        "type": "action",
+        "description": "Delete the category and confirm deletion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the category is added, updated, and then removed from the available categories"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC033",
+    "title": "Clear trip search to restore the full list",
+    "description": "This verifies that a traveler can remove a search query on the home dashboard and return to the complete trip list.",
+    "category": "Trip Dashboard and Stats",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the trip search field with a value that matches at least one trip"
+      },
+      {
+        "type": "action",
+        "description": "Clear the trip search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the full trip list is displayed again"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC034",
+    "title": "Filter items by category and packed state",
+    "description": "This test verifies that a traveler can narrow the list by category and unpacked-only state to find what still needs packing.",
+    "category": "Search and Category Filtering",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add items in at least two categories"
+      },
+      {
+        "type": "action",
+        "description": "Pack one of the items"
+      },
+      {
+        "type": "action",
+        "description": "Select a category filter"
+      },
+      {
+        "type": "action",
+        "description": "Enable the unpacked-only filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify packed items are hidden and only matching unpacked items remain"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC035",
+    "title": "Browse and preview templates from the home dashboard",
+    "description": "This verifies that a user can open the template library from the dashboard and inspect a template before using it.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the template library"
+      },
+      {
+        "type": "action",
+        "description": "Select a template to preview"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the template preview is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the template contents are visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC036",
+    "title": "Switch item sort mode",
+    "description": "This test verifies that a traveler can change the item sort mode and see the ordering update.",
+    "category": "Search and Category Filtering",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add multiple items in a non-alphabetical order"
+      },
+      {
+        "type": "action",
+        "description": "Change the sort mode"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the item order updates to the selected sort mode"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC037",
+    "title": "Delete a template from the template library",
+    "description": "This verifies that a user can remove a reusable template they no longer want to keep.",
+    "category": "Packing Templates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the template library"
+      },
+      {
+        "type": "action",
+        "description": "Select a user-created template"
+      },
+      {
+        "type": "action",
+        "description": "Delete the template and confirm deletion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the template is removed from the library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state is shown when no matching templates remain"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC038",
+    "title": "See an empty state when no trips match the search",
+    "description": "This verifies that a traveler gets a clear empty result when the home dashboard search does not match any trips.",
+    "category": "Trip Dashboard and Stats",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the trip search field with a value that does not match any trip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state message is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no trips are shown in the list"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC039",
+    "title": "Reorder items in manual mode",
+    "description": "This test verifies that a traveler can manually reorder items when no filter is active.",
+    "category": "Search and Category Filtering",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Create a new trip with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Add multiple items to the trip"
+      },
+      {
+        "type": "action",
+        "description": "Set sorting to manual mode"
+      },
+      {
+        "type": "action",
+        "description": "Move one item to a different position"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the item order changes to match the manual arrangement"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC040",
+    "title": "Required trip name validation prevents empty trips",
+    "description": "This test verifies that the app blocks creating a trip without a required name and shows validation feedback.",
+    "category": "Packing Progress Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new trip without entering a name"
+      },
+      {
+        "type": "action",
+        "description": "Submit the trip form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a trip name validation error is visible"
+      }
+    ],
+    "priority": "Low"
+  }
+]

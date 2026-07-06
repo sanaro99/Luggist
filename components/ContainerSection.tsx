@@ -8,7 +8,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { flattenItems, progressOf, type ContainerNode } from "@/lib/progress";
+import { flattenItems, progressOf, weightOf, type ContainerNode } from "@/lib/progress";
+import { formatKg } from "@/lib/format";
 import { setPackedForItems } from "@/lib/repo";
 import { containerDragId, itemDragId, zoneDropId } from "@/lib/dnd";
 import type { Category, Container, Item } from "@/lib/types";
@@ -39,7 +40,7 @@ function Chevron({ open }: { open: boolean }) {
       height="14"
       viewBox="0 0 16 16"
       fill="none"
-      className={`shrink-0 text-slate-400 transition-transform ${open ? "rotate-90" : ""}`}
+      className={`shrink-0 text-base-content/40 transition-transform ${open ? "rotate-90" : ""}`}
       aria-hidden
     >
       <path
@@ -75,7 +76,7 @@ export default function ContainerSection({
       data: { type: "container", parentId: container.parentId },
       disabled: dndDisabled,
     });
-  const { setNodeRef: setZoneRef } = useDroppable({
+  const { setNodeRef: setZoneRef, isOver } = useDroppable({
     id: zoneDropId(container.id),
     data: { type: "zone", containerId: container.id },
   });
@@ -83,6 +84,10 @@ export default function ContainerSection({
   const all = flattenItems(node);
   const progress = progressOf(all);
   const isBag = container.kind === "bag";
+  const weight = weightOf(all);
+  const weightLimit = container.weightLimit;
+  const overLimit = weightLimit != null && weight > weightLimit;
+  const showWeight = isBag && (weight > 0 || weightLimit != null);
 
   const itemIds = all.map((i) => i.id);
   const bulkActions: MenuAction[] = [];
@@ -113,20 +118,27 @@ export default function ContainerSection({
       ];
 
   const style = { transform: CSS.Transform.toString(transform), transition };
+  const accent = container.color;
+
+  const shell = isBag
+    ? `card border bg-base-100/90 p-4 shadow-sm backdrop-blur transition-colors ${
+        progress.done ? "border-success/40" : "border-base-300/70"
+      }`
+    : `rounded-2xl border border-base-300/60 bg-base-200/50 p-3`;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`${
-        isBag ? "card p-4" : "rounded-xl border border-slate-200 bg-slate-50/70 p-3"
-      } ${isDragging ? "opacity-60" : ""}`}
+      className={`${shell} ${isDragging ? "opacity-60 shadow-lg" : ""} ${
+        isOver ? "ring-2 ring-primary/40" : ""
+      }`}
     >
       <div className="flex items-center gap-1.5">
         {!dndDisabled && (
           <button
             type="button"
-            className="shrink-0 cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+            className="shrink-0 cursor-grab touch-none text-base-content/25 hover:text-base-content/50 active:cursor-grabbing"
             aria-label={`Drag ${container.name}`}
             {...attributes}
             {...listeners}
@@ -140,22 +152,33 @@ export default function ContainerSection({
           aria-expanded={open}
         >
           <Chevron open={open} />
-          {container.color && (
-            <span
-              className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: container.color }}
-            />
-          )}
           <span
-            className={`truncate font-medium ${isBag ? "text-slate-900" : "text-slate-700"}`}
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-sm"
+            style={{
+              backgroundColor: accent
+                ? `color-mix(in oklch, ${accent} 24%, transparent)`
+                : "var(--color-base-200)",
+            }}
+            aria-hidden
+          >
+            {isBag ? "🧳" : "🧦"}
+          </span>
+          <span
+            className={`truncate font-medium ${isBag ? "font-display text-base text-base-content" : "text-sm text-base-content/80"}`}
           >
             {container.name}
           </span>
-          {!isBag && <span className="shrink-0 text-xs text-slate-400">cube</span>}
+          {!isBag && (
+            <span className="badge badge-xs shrink-0 border-0 bg-base-300 text-base-content/50">
+              cube
+            </span>
+          )}
         </button>
         <span
-          className={`shrink-0 text-xs font-medium ${
-            progress.done ? "text-emerald-600" : "text-slate-500"
+          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+            progress.done
+              ? "bg-success/15 text-success"
+              : "bg-base-200 text-base-content/55"
           }`}
         >
           {progress.done ? "Packed ✓" : `${progress.packed}/${progress.total}`}
@@ -170,6 +193,21 @@ export default function ContainerSection({
           size="sm"
           className="mt-2.5"
         />
+      )}
+
+      {showWeight && (
+        <p
+          className={`mt-1.5 text-xs ${
+            overLimit ? "font-medium text-error" : "text-base-content/45"
+          }`}
+        >
+          {overLimit && "⚠️ "}
+          {weightLimit != null
+            ? `${formatKg(weight)} / ${formatKg(weightLimit)}${
+                overLimit ? " — over limit" : ""
+              }`
+            : `${formatKg(weight)} total`}
+        </p>
       )}
 
       {open && (
@@ -196,7 +234,7 @@ export default function ContainerSection({
             ))}
           </SortableContext>
 
-          <div ref={setZoneRef} className="min-h-[4px] space-y-1">
+          <div ref={setZoneRef} className="min-h-[6px] space-y-1">
             <SortableContext
               items={node.items.map((i) => itemDragId(i.id))}
               strategy={verticalListSortingStrategy}
@@ -214,6 +252,11 @@ export default function ContainerSection({
                 />
               ))}
             </SortableContext>
+            {progress.total === 0 && !filtering && (
+              <p className="px-2 py-1 text-xs text-base-content/40">
+                Empty — add an item or drag one here.
+              </p>
+            )}
           </div>
 
           {!filtering && (
@@ -224,7 +267,10 @@ export default function ContainerSection({
                 onOpenFull={() => onAddItem(container.id)}
               />
               {isBag && (
-                <button className="btn-ghost" onClick={() => onAddCube(container.id)}>
+                <button
+                  className="btn btn-ghost btn-sm rounded-full text-base-content/55"
+                  onClick={() => onAddCube(container.id)}
+                >
                   ＋ Add cube
                 </button>
               )}

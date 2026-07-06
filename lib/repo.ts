@@ -54,6 +54,7 @@ export async function addContainer(
   name: string,
   parentId: string | null = null,
   color?: string,
+  weightLimit?: number,
 ): Promise<string> {
   const id = uid();
   await db.containers.add({
@@ -63,14 +64,20 @@ export async function addContainer(
     kind,
     name: name.trim(),
     color,
+    weightLimit,
     sortOrder: now(),
     createdAt: now(),
   });
   return id;
 }
 
-export function addBag(tripId: string, name: string, color?: string) {
-  return addContainer(tripId, "bag", name, null, color);
+export function addBag(
+  tripId: string,
+  name: string,
+  color?: string,
+  weightLimit?: number,
+) {
+  return addContainer(tripId, "bag", name, null, color, weightLimit);
 }
 
 export function addCube(
@@ -123,6 +130,7 @@ export interface ItemInput {
   categoryId?: string | null;
   quantity?: number;
   notes?: string;
+  weight?: number;
 }
 
 export async function addItem(tripId: string, input: ItemInput): Promise<string> {
@@ -137,6 +145,7 @@ export async function addItem(tripId: string, input: ItemInput): Promise<string>
     quantity: Math.max(1, input.quantity ?? 1),
     packed: false,
     notes: input.notes?.trim() || undefined,
+    weight: input.weight && input.weight > 0 ? input.weight : undefined,
     sortOrder: ts,
     createdAt: ts,
     updatedAt: ts,

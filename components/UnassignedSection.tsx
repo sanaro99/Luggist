@@ -34,19 +34,28 @@ export default function UnassignedSection({
   onDeleteItem,
   onAddFull,
 }: UnassignedSectionProps) {
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef, isOver } = useDroppable({
     id: zoneDropId(null),
     data: { type: "zone", containerId: null },
   });
   const progress = progressOf(items);
 
   return (
-    <div className="card p-4">
+    <div
+      className={`card border border-dashed border-base-300 bg-base-100/60 p-4 backdrop-blur ${
+        isOver ? "ring-2 ring-primary/40" : ""
+      }`}
+    >
       <div className="flex items-center gap-2">
-        <span className="flex-1 font-medium text-slate-700">Unassigned</span>
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-base-200 text-sm" aria-hidden>
+          🏷️
+        </span>
+        <span className="flex-1 font-medium text-base-content/80">Unassigned</span>
         <span
-          className={`text-xs font-medium ${
-            progress.done ? "text-emerald-600" : "text-slate-500"
+          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+            progress.done
+              ? "bg-success/15 text-success"
+              : "bg-base-200 text-base-content/55"
           }`}
         >
           {progress.done ? "Packed ✓" : `${progress.packed}/${progress.total}`}
@@ -60,7 +69,7 @@ export default function UnassignedSection({
           className="mt-2.5"
         />
       )}
-      <div ref={setNodeRef} className="mt-3 min-h-[4px] space-y-1">
+      <div ref={setNodeRef} className="mt-3 min-h-[6px] space-y-1">
         <SortableContext
           items={items.map((i) => itemDragId(i.id))}
           strategy={verticalListSortingStrategy}
@@ -79,11 +88,7 @@ export default function UnassignedSection({
           ))}
         </SortableContext>
         {!filtering && (
-          <QuickAddItem
-            tripId={tripId}
-            containerId={null}
-            onOpenFull={onAddFull}
-          />
+          <QuickAddItem tripId={tripId} containerId={null} onOpenFull={onAddFull} />
         )}
       </div>
     </div>

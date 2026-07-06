@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import Modal from "./Modal";
+import { useToast } from "./Toaster";
 import { db } from "@/lib/db";
 import { createTrip, updateTrip } from "@/lib/repo";
 import { createTripFromTemplate } from "@/lib/templates";
@@ -21,6 +22,7 @@ export default function TripForm(props: TripFormProps) {
 }
 
 function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
+  const { toast } = useToast();
   const [name, setName] = useState(trip?.name ?? "");
   const [destination, setDestination] = useState(trip?.destination ?? "");
   const [startDate, setStartDate] = useState(trip?.startDate ?? "");
@@ -45,11 +47,14 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
     };
     if (trip) {
       await updateTrip(trip.id, payload);
+      toast("Trip updated");
     } else if (fromTemplateId) {
       const id = await createTripFromTemplate(fromTemplateId, payload);
+      toast("Trip created from template", { icon: "📋" });
       if (id) onCreated?.(id);
     } else {
       const id = await createTrip(payload);
+      toast("Trip created", { icon: "🧳" });
       onCreated?.(id);
     }
     onClose();
@@ -60,12 +65,12 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
       <form onSubmit={submit} className="space-y-4">
         {showTemplatePicker && (
           <div>
-            <label className="label" htmlFor="trip-template">
+            <label className="form-label" htmlFor="trip-template">
               Start from
             </label>
             <select
               id="trip-template"
-              className="input"
+              className="select select-bordered w-full"
               value={fromTemplateId}
               onChange={(e) => setFromTemplateId(e.target.value)}
             >
@@ -79,12 +84,12 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
           </div>
         )}
         <div>
-          <label className="label" htmlFor="trip-name">
+          <label className="form-label" htmlFor="trip-name">
             Trip name
           </label>
           <input
             id="trip-name"
-            className="input"
+            className="input input-bordered w-full"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Japan, two weeks"
@@ -92,12 +97,13 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
           />
         </div>
         <div>
-          <label className="label" htmlFor="trip-dest">
-            Destination <span className="font-normal text-slate-400">(optional)</span>
+          <label className="form-label" htmlFor="trip-dest">
+            Destination{" "}
+            <span className="font-normal text-base-content/40">(optional)</span>
           </label>
           <input
             id="trip-dest"
-            className="input"
+            className="input input-bordered w-full"
             value={destination}
             onChange={(e) => setDestination(e.target.value)}
             placeholder="e.g. Tokyo"
@@ -105,25 +111,25 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label" htmlFor="trip-start">
+            <label className="form-label" htmlFor="trip-start">
               Start
             </label>
             <input
               id="trip-start"
               type="date"
-              className="input"
+              className="input input-bordered w-full"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
           </div>
           <div>
-            <label className="label" htmlFor="trip-end">
+            <label className="form-label" htmlFor="trip-end">
               End
             </label>
             <input
               id="trip-end"
               type="date"
-              className="input"
+              className="input input-bordered w-full"
               value={endDate}
               min={startDate || undefined}
               onChange={(e) => setEndDate(e.target.value)}
@@ -131,18 +137,23 @@ function TripFormInner({ onClose, trip, onCreated }: TripFormProps) {
           </div>
         </div>
         <div>
-          <label className="label" htmlFor="trip-notes">
-            Notes <span className="font-normal text-slate-400">(optional)</span>
+          <label className="form-label" htmlFor="trip-notes">
+            Notes{" "}
+            <span className="font-normal text-base-content/40">(optional)</span>
           </label>
           <textarea
             id="trip-notes"
-            className="input min-h-[72px] resize-y"
+            className="textarea textarea-bordered min-h-[72px] w-full resize-y"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Anything to remember…"
           />
         </div>
-        <button type="submit" className="btn-primary w-full" disabled={!name.trim()}>
+        <button
+          type="submit"
+          className="btn btn-primary w-full"
+          disabled={!name.trim()}
+        >
           {trip ? "Save changes" : "Create trip"}
         </button>
       </form>

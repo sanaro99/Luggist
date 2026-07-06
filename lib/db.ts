@@ -30,6 +30,16 @@ export class LuggistDB extends Dexie {
       categories: "id, sortOrder",
       templates: "id, name, createdAt",
     });
+    // v3: add optional weight fields (Item.weight, Container.weightLimit).
+    // Non-indexed, so the index strings are unchanged and no upgrade callback is
+    // needed — existing rows simply read these fields as `undefined`.
+    this.version(3).stores({
+      trips: "id, updatedAt, createdAt",
+      containers: "id, tripId",
+      items: "id, tripId, categoryId",
+      categories: "id, sortOrder",
+      templates: "id, name, createdAt",
+    });
   }
 }
 

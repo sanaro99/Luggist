@@ -15,20 +15,44 @@ export function progressOf(items: Item[]): Progress {
   return { packed, total, pct, done: total > 0 && packed === total };
 }
 
+/** Total weight (kg) of a list of items, counted per unit (× quantity). */
+export function weightOf(items: Item[]): number {
+  return items.reduce((sum, i) => sum + (i.weight ?? 0) * i.quantity, 0);
+}
+
 export interface ContainerNode {
   container: Container;
   items: Item[]; // items directly in this container
   children: ContainerNode[]; // nested cubes
 }
 
+export type ItemSort = "manual" | "az" | "packed";
+
+/** Comparator for the trip view's "sort" control. */
+export function itemComparator(sort: ItemSort): (a: Item, b: Item) => number {
+  switch (sort) {
+    case "az":
+      return (a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    case "packed":
+      // Unpacked first, packed last; stable within a group by manual order.
+      return (a, b) =>
+        Number(a.packed) - Number(b.packed) || a.sortOrder - b.sortOrder;
+    default:
+      return (a, b) => a.sortOrder - b.sortOrder;
+  }
+}
+
 /**
  * Builds the bag → cube tree for a trip and attaches each container's direct
  * items. Items whose container was deleted (or never assigned) are returned
- * separately as `unassigned`.
+ * separately as `unassigned`. Item order within a container follows `compare`
+ * (defaults to manual `sortOrder`); containers always follow `sortOrder`.
  */
 export function buildTree(
   containers: Container[],
   items: Item[],
+  compare: (a: Item, b: Item) => number = (a, b) => a.sortOrder - b.sortOrder,
 ): { roots: ContainerNode[]; unassigned: Item[] } {
   const byContainer = new Map<string, Item[]>();
   const unassigned: Item[] = [];
@@ -44,7 +68,7 @@ export function buildTree(
     }
   }
 
-  const sortItems = (a: Item, b: Item) => a.sortOrder - b.sortOrder;
+  const sortItems = compare;
   const sortContainers = (a: Container, b: Container) => a.sortOrder - b.sortOrder;
 
   const makeNode = (container: Container): ContainerNode => ({

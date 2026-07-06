@@ -38,15 +38,15 @@ function CategoryRow({ cat }: { cat: Category }) {
 
   if (confirming) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2">
-        <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+      <div className="flex items-center gap-2 rounded-xl border border-error/30 bg-error/10 p-2">
+        <span className="min-w-0 flex-1 truncate text-sm text-base-content">
           Delete “{cat.name}”?
         </span>
-        <button className="btn-ghost" onClick={() => setConfirming(false)}>
+        <button className="btn btn-ghost btn-sm" onClick={() => setConfirming(false)}>
           Cancel
         </button>
         <button
-          className="px-2 py-1 text-sm font-medium text-red-600"
+          className="btn btn-error btn-sm"
           onClick={() => deleteCategory(cat.id)}
         >
           Delete
@@ -56,17 +56,17 @@ function CategoryRow({ cat }: { cat: Category }) {
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 p-2">
+    <div className="rounded-xl border border-base-300 p-2">
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => setShowColors((v) => !v)}
           style={{ backgroundColor: cat.color }}
-          className="h-5 w-5 shrink-0 rounded-full ring-1 ring-black/5"
+          className="h-6 w-6 shrink-0 rounded-full ring-1 ring-black/5 transition hover:scale-110"
           aria-label="Change color"
         />
         <input
-          className="min-w-0 flex-1 rounded-md border border-transparent px-1.5 py-1 text-sm text-slate-800 outline-none hover:border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+          className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm text-base-content outline-none hover:border-base-300 focus:border-primary"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={saveName}
@@ -75,7 +75,7 @@ function CategoryRow({ cat }: { cat: Category }) {
           }}
         />
         <button
-          className="btn-ghost text-slate-400 hover:text-red-600"
+          className="btn btn-ghost btn-sm btn-circle text-base-content/40 hover:text-error"
           onClick={() => setConfirming(true)}
           aria-label={`Delete ${cat.name}`}
         >
@@ -83,7 +83,7 @@ function CategoryRow({ cat }: { cat: Category }) {
         </button>
       </div>
       {showColors && (
-        <div className="mt-2 flex flex-wrap gap-1.5 pl-7">
+        <div className="mt-2 flex flex-wrap gap-1.5 pl-8">
           {COLOR_PALETTE.map((c) => (
             <button
               key={c}
@@ -95,7 +95,7 @@ function CategoryRow({ cat }: { cat: Category }) {
               style={{ backgroundColor: c }}
               className={`h-6 w-6 rounded-full ${
                 cat.color === c
-                  ? "ring-2 ring-slate-900 ring-offset-1"
+                  ? "ring-2 ring-base-content ring-offset-1 ring-offset-base-100"
                   : "ring-1 ring-black/5"
               }`}
               aria-label={`Use color ${c}`}
@@ -112,10 +112,7 @@ interface ManageCategoriesProps {
   onClose: () => void;
 }
 
-export default function ManageCategories({
-  open,
-  onClose,
-}: ManageCategoriesProps) {
+export default function ManageCategories({ open, onClose }: ManageCategoriesProps) {
   const categories = useLiveQuery(() =>
     db.categories.orderBy("sortOrder").toArray(),
   );
@@ -131,20 +128,21 @@ export default function ManageCategories({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Categories">
-      <p className="mb-4 text-sm text-slate-500">
-        Categories are shared across all your trips.
-      </p>
-
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Categories"
+      subtitle="Shared across all your trips"
+    >
       <form onSubmit={add} className="mb-4 space-y-2">
         <div className="flex gap-2">
           <input
-            className="input"
+            className="input input-bordered w-full"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="New category…"
           />
-          <button type="submit" className="btn-primary" disabled={!newName.trim()}>
+          <button type="submit" className="btn btn-primary" disabled={!newName.trim()}>
             Add
           </button>
         </div>
@@ -157,7 +155,7 @@ export default function ManageCategories({
               style={{ backgroundColor: c }}
               className={`h-6 w-6 rounded-full ${
                 newColor === c
-                  ? "ring-2 ring-slate-900 ring-offset-1"
+                  ? "ring-2 ring-base-content ring-offset-1 ring-offset-base-100"
                   : "ring-1 ring-black/5"
               }`}
               aria-label={`Use color ${c}`}
@@ -171,7 +169,7 @@ export default function ManageCategories({
           <CategoryRow key={`${cat.id}:${cat.name}:${cat.color}`} cat={cat} />
         ))}
         {categories && categories.length === 0 && (
-          <p className="py-4 text-center text-sm text-slate-400">
+          <p className="py-4 text-center text-sm text-base-content/40">
             No categories yet.
           </p>
         )}
