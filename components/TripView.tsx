@@ -28,6 +28,7 @@ import {
   deleteItem,
   deleteTrip,
   reorderContainers,
+  restoreItem,
   setItemsOrder,
   setPackedForItems,
   updateItem,
@@ -53,6 +54,7 @@ import { containerDragId, parseDragId } from "@/lib/dnd";
 import type { Container, ContainerKind, Item } from "@/lib/types";
 import { useToast } from "./Toaster";
 import ProgressBar from "./ProgressBar";
+import TripProgressStrip from "./TripProgressStrip";
 import CountdownBadge from "./CountdownBadge";
 import ContainerSection from "./ContainerSection";
 import UnassignedSection from "./UnassignedSection";
@@ -132,6 +134,23 @@ export default function TripView({ tripId }: { tripId: string }) {
     type: "item" | "container";
     label: string;
   } | null>(null);
+
+  // The compact progress strip appears once the header card scrolls away.
+  const headerCardRef = useRef<HTMLDivElement>(null);
+  const [headerAway, setHeaderAway] = useState(false);
+  const loaded = trip != null;
+  useEffect(() => {
+    if (!loaded) return;
+    const el = headerCardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeaderAway(!entry.isIntersecting),
+      // Treat the card as gone once it's fully behind the sticky site header.
+      { rootMargin: "-64px 0px 0px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loaded]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -257,13 +276,16 @@ export default function TripView({ tripId }: { tripId: string }) {
       message: "Items inside will be moved to Unassigned, not deleted.",
       action: () => void deleteContainer(c.id),
     });
-  const askDeleteItem = (it: Item) =>
-    setConfirm({
-      open: true,
-      title: "Delete item?",
-      message: `"${it.name}" will be removed.`,
-      action: () => void deleteItem(it.id),
+  // Item deletes skip the confirm dialog: they're instantly reversible via
+  // the Undo action on the toast (container/trip deletes still confirm).
+  const removeItem = async (it: Item) => {
+    await deleteItem(it.id);
+    toast(`Deleted “${it.name}”`, {
+      tone: "info",
+      icon: "🗑️",
+      action: { label: "Undo", onClick: () => void restoreItem(it) },
     });
+  };
 
   // Coarse season hint from the start month; the model also gets the
   // destination, so it can correct for hemisphere.
@@ -471,8 +493,20 @@ export default function TripView({ tripId }: { tripId: string }) {
         ← All trips
       </Link>
 
+      {headerAway && (
+        <TripProgressStrip
+          name={trip.name}
+          packed={overall.packed}
+          total={overall.total}
+          onAddItem={() => openAddItem(null)}
+        />
+      )}
+
       {/* Trip header */}
-      <div className="card animate-rise border border-base-300/70 bg-base-100/90 p-5 shadow-sm backdrop-blur">
+      <div
+        ref={headerCardRef}
+        className="card animate-rise border border-base-300/70 bg-base-100/90 p-5 shadow-sm backdrop-blur"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="font-display truncate text-2xl font-semibold tracking-tight text-base-content">
@@ -630,7 +664,7 @@ export default function TripView({ tripId }: { tripId: string }) {
                     onEditContainer={openEditContainer}
                     onDeleteContainer={askDeleteContainer}
                     onEditItem={openEditItem}
-                    onDeleteItem={askDeleteItem}
+                    onDeleteItem={removeItem}
                   />
                 ))}
               </SortableContext>
@@ -643,7 +677,7 @@ export default function TripView({ tripId }: { tripId: string }) {
                   filtering={filtered}
                   dndDisabled={dndDisabled}
                   onEditItem={openEditItem}
-                  onDeleteItem={askDeleteItem}
+                  onDeleteItem={removeItem}
                   onAddFull={() => openAddItem(null)}
                 />
               )}
