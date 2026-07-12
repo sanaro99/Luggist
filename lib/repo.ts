@@ -177,6 +177,11 @@ export async function deleteItem(id: string): Promise<void> {
   await db.items.delete(id);
 }
 
+/** Puts a just-deleted item back exactly as it was (powers the Undo toast). */
+export async function restoreItem(item: Item): Promise<void> {
+  await db.items.put({ ...item, updatedAt: now() });
+}
+
 /** Sets `packed` for every item in a container (used by bulk pack/unpack). */
 export async function setPackedForItems(
   ids: string[],

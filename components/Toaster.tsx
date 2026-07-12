@@ -11,17 +11,25 @@ import {
 
 type ToastTone = "success" | "error" | "info";
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface Toast {
   id: number;
   message: string;
   tone: ToastTone;
   icon: string;
+  action?: ToastAction;
 }
 
 interface ToastOptions {
   tone?: ToastTone;
   icon?: string;
   duration?: number;
+  /** Optional action button (e.g. Undo). Action toasts linger a bit longer. */
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
@@ -51,11 +59,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const id = nextId.current++;
     setToasts((prev) => [
       ...prev,
-      { id, message, tone, icon: opts.icon ?? DEFAULT_ICON[tone] },
+      {
+        id,
+        message,
+        tone,
+        icon: opts.icon ?? DEFAULT_ICON[tone],
+        action: opts.action,
+      },
     ]);
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, opts.duration ?? 2600);
+    window.setTimeout(
+      () => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      },
+      opts.duration ?? (opts.action ? 5200 : 2600),
+    );
+  }, []);
+
+  const dismiss = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   return (
@@ -72,6 +93,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               {t.icon}
             </span>
             <span className="truncate">{t.message}</span>
+            {t.action && (
+              <button
+                type="button"
+                onClick={() => {
+                  dismiss(t.id);
+                  t.action!.onClick();
+                }}
+                className="btn btn-ghost btn-xs -mr-1 shrink-0 rounded-full font-semibold text-primary"
+              >
+                {t.action.label}
+              </button>
+            )}
           </div>
         ))}
       </div>

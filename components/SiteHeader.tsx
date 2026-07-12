@@ -1,4 +1,6 @@
 import Link from "next/link";
+import InstallPrompt from "./InstallPrompt";
+import OfflineBadge from "./OfflineBadge";
 import ThemeToggle from "./ThemeToggle";
 
 export default function SiteHeader() {
@@ -20,7 +22,11 @@ export default function SiteHeader() {
             Luggist
           </span>
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-1.5">
+          <OfflineBadge />
+          <InstallPrompt />
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
