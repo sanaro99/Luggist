@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export interface MenuAction {
   label: string;
@@ -33,14 +33,30 @@ export default function Menu({
   ariaLabel = "Open menu",
 }: MenuProps) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Escape closes the menu and hands focus back to the trigger.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <div className="relative shrink-0">
       <button
+        ref={triggerRef}
         type="button"
         className="btn btn-circle btn-ghost btn-sm text-base-content/60"
         aria-label={ariaLabel}
         aria-haspopup="menu"
+        aria-expanded={open}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();

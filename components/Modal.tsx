@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 interface ModalProps {
@@ -11,6 +11,9 @@ interface ModalProps {
   children: React.ReactNode;
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export default function Modal({
   open,
   onClose,
@@ -18,16 +21,51 @@ export default function Modal({
   subtitle,
   children,
 }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
+    const panel = panelRef.current;
+    // Whatever had focus before the dialog opened gets it back on close.
+    const previous =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    // An autoFocus field inside the dialog wins; otherwise focus the first
+    // focusable element so keyboard users land inside the dialog.
+    if (panel && !panel.contains(document.activeElement)) {
+      (panel.querySelector<HTMLElement>(FOCUSABLE) ?? panel).focus();
+    }
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      // Trap Tab / Shift+Tab inside the dialog panel.
+      if (e.key !== "Tab" || !panel) return;
+      const nodes = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (nodes.length === 0) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first || !panel.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !panel.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
+
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKey);
+      previous?.focus();
     };
   }, [open, onClose]);
 
@@ -41,10 +79,12 @@ export default function Modal({
         aria-hidden
       />
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="animate-rise relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-3xl border border-base-300 bg-base-100 shadow-2xl sm:max-w-md sm:rounded-3xl"
+        className="animate-rise relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-3xl border border-base-300 bg-base-100 shadow-2xl outline-none sm:max-w-md sm:rounded-3xl"
       >
         <div className="flex items-start justify-between gap-3 border-b border-base-200 px-5 py-4">
           <div className="min-w-0">
