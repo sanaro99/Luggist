@@ -59,7 +59,8 @@ import CountdownBadge from "./CountdownBadge";
 import ContainerSection from "./ContainerSection";
 import UnassignedSection from "./UnassignedSection";
 import SearchBar from "./SearchBar";
-import CategoryFilter, { UNCATEGORIZED } from "./CategoryFilter";
+import { UNCATEGORIZED } from "./CategoryFilter";
+import FilterPanel from "./FilterPanel";
 import Menu, { type MenuAction } from "./Menu";
 import TripForm from "./TripForm";
 import ItemForm from "./ItemForm";
@@ -69,6 +70,19 @@ import ConfirmDialog from "./ConfirmDialog";
 import SaveAsTemplate from "./SaveAsTemplate";
 import AiGenerateList from "./AiGenerateList";
 import AuditSuggestions from "./AuditSuggestions";
+
+function FilterIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M3 5h14M6 10h8M9 15h2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 function StatChip({ icon, label }: { icon: string; label: string }) {
   return (
@@ -104,6 +118,7 @@ export default function TripView({ tripId }: { tripId: string }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unpackedOnly, setUnpackedOnly] = useState(false);
   const [sortMode, setSortMode] = useState<ItemSort>("manual");
+  const [showFilters, setShowFilters] = useState(false);
   const [editingTrip, setEditingTrip] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
@@ -176,6 +191,17 @@ export default function TripView({ tripId }: { tripId: string }) {
   // hides quick-add; any of these — or a non-manual sort — also pauses DnD.
   const filtered = query !== "" || selected.size > 0 || unpackedOnly;
   const dndDisabled = filtered || sortMode !== "manual";
+
+  // Search lives in the toolbar, so only the panel's own controls are counted.
+  const filterCount =
+    (selected.size > 0 ? 1 : 0) +
+    (unpackedOnly ? 1 : 0) +
+    (sortMode !== "manual" ? 1 : 0);
+  const resetFilters = () => {
+    setSelected(new Set());
+    setUnpackedOnly(false);
+    setSortMode("manual");
+  };
 
   const filteredItems = useMemo(() => {
     return (items ?? []).filter((it) => {
@@ -449,22 +475,24 @@ export default function TripView({ tripId }: { tripId: string }) {
   };
 
   const hasUncategorized = items.some((i) => !i.categoryId);
-  const tripMenuActions: MenuAction[] = [
-    { label: "Edit trip", onClick: () => setEditingTrip(true) },
-    { label: "✨ Generate with AI", onClick: () => setShowGenerate(true) },
+  // Grouped so a ten-entry menu scans instead of reads: trip, AI, bulk packing,
+  // library, then the destructive action on its own.
+  const aiActions: MenuAction[] = [
+    { label: "Generate with AI", icon: "✨", onClick: () => setShowGenerate(true) },
     ...(items.length > 0
-      ? [{ label: "What am I forgetting?", onClick: runAudit }]
+      ? [{ label: "What am I forgetting?", icon: "🔎", onClick: runAudit }]
       : []),
     ...(hasUncategorized
-      ? [{ label: "Auto-categorize items", onClick: autoCategorize }]
+      ? [{ label: "Auto-categorize", icon: "🏷️", onClick: autoCategorize }]
       : []),
+  ];
+  const bulkActions: MenuAction[] = [
     ...(overall.total > 0 && overall.packed < overall.total
       ? [
           {
             label: "Mark all packed",
-            onClick: () => {
-              setPackedForItems(allItemIds, true);
-            },
+            icon: "✅",
+            onClick: () => setPackedForItems(allItemIds, true),
           },
         ]
       : []),
@@ -472,6 +500,7 @@ export default function TripView({ tripId }: { tripId: string }) {
       ? [
           {
             label: "Mark all unpacked",
+            icon: "↩️",
             onClick: () => {
               setPackedForItems(allItemIds, false);
               toast("Unpacked everything", { tone: "info", icon: "↩️" });
@@ -479,9 +508,30 @@ export default function TripView({ tripId }: { tripId: string }) {
           },
         ]
       : []),
-    { label: "Save as template", onClick: () => setShowSaveTemplate(true) },
-    { label: "Manage categories", onClick: () => setShowCategories(true) },
-    { label: "Delete trip", onClick: askDeleteTrip, danger: true },
+  ];
+  const tripMenuActions: MenuAction[] = [
+    { label: "Edit trip", icon: "✏️", onClick: () => setEditingTrip(true) },
+    { label: "Add bag", icon: "🧳", onClick: openAddBag },
+    ...aiActions.map((a, i) => (i === 0 ? { ...a, startsGroup: true } : a)),
+    ...bulkActions.map((a, i) => (i === 0 ? { ...a, startsGroup: true } : a)),
+    {
+      label: "Save as template",
+      icon: "📋",
+      startsGroup: true,
+      onClick: () => setShowSaveTemplate(true),
+    },
+    {
+      label: "Manage categories",
+      icon: "🗂️",
+      onClick: () => setShowCategories(true),
+    },
+    {
+      label: "Delete trip",
+      icon: "🗑️",
+      startsGroup: true,
+      onClick: askDeleteTrip,
+      danger: true,
+    },
   ];
 
   return (
@@ -553,55 +603,53 @@ export default function TripView({ tripId }: { tripId: string }) {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      {/* Toolbar — one row, so the list starts near the top of the screen */}
+      <div className="mt-5 flex items-center gap-2">
         <SearchBar value={search} onChange={setSearch} />
-        <button className="btn btn-primary" onClick={() => openAddItem(null)}>
+        {!isEmpty && (
+          <button
+            type="button"
+            className={`btn btn-ghost gap-1.5 border ${
+              filterCount > 0
+                ? "border-primary/50 text-primary"
+                : "border-base-300"
+            }`}
+            aria-expanded={showFilters}
+            aria-controls="trip-filters"
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            <FilterIcon />
+            <span className="hidden sm:inline">Filters</span>
+            {filterCount > 0 && (
+              <span className="badge badge-sm border-0 bg-primary text-primary-content">
+                {filterCount}
+              </span>
+            )}
+          </button>
+        )}
+        <button
+          className="btn btn-primary shrink-0"
+          onClick={() => openAddItem(null)}
+        >
           ＋ Item
-        </button>
-        <button className="btn btn-ghost border border-base-300" onClick={openAddBag}>
-          ＋ Bag
         </button>
       </div>
 
-      {/* Filters / sort */}
       {!isEmpty && (
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-base-content/70">
-            <input
-              type="checkbox"
-              className="toggle toggle-primary toggle-sm"
-              checked={unpackedOnly}
-              onChange={(e) => setUnpackedOnly(e.target.checked)}
-            />
-            Unpacked only
-          </label>
-          <label className="ml-auto flex items-center gap-2 text-sm text-base-content/70">
-            <span>Sort</span>
-            <select
-              className="select select-bordered select-sm rounded-full"
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value as ItemSort)}
-              aria-label="Sort items"
-            >
-              <option value="manual">Manual</option>
-              <option value="az">A – Z</option>
-              <option value="packed">Packed last</option>
-            </select>
-          </label>
-        </div>
-      )}
-
-      {categories.length > 0 && (
-        <div className="mt-3">
-          <CategoryFilter
-            categories={categories}
-            counts={categoryCounts}
-            selected={selected}
-            onToggle={toggleCategory}
-            onClear={() => setSelected(new Set())}
-          />
-        </div>
+        <FilterPanel
+          open={showFilters}
+          categories={categories}
+          counts={categoryCounts}
+          selected={selected}
+          onToggleCategory={toggleCategory}
+          onClearCategories={() => setSelected(new Set())}
+          unpackedOnly={unpackedOnly}
+          onUnpackedOnlyChange={setUnpackedOnly}
+          sortMode={sortMode}
+          onSortModeChange={setSortMode}
+          onReset={resetFilters}
+          activeCount={filterCount}
+        />
       )}
 
       {/* Body */}
