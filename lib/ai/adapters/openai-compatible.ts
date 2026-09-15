@@ -20,6 +20,11 @@ export async function completeOpenAICompatible(
   const client = new OpenAI({
     apiKey: cfg.apiKey || "ollama", // local Ollama needs a non-empty placeholder
     baseURL: cfg.baseUrl,
+    // Gemini's current authorization keys accept the Google API-key header.
+    // Keep the SDK's standard Bearer header too for OpenAI compatibility.
+    ...(cfg.provider === "gemini" && cfg.apiKey
+      ? { defaultHeaders: { "x-goog-api-key": cfg.apiKey } }
+      : {}),
     // The SDK retries 429s by default. One additional retry gives providers
     // time to clear short request-per-second limits without retrying forever.
     maxRetries: 3,
@@ -50,6 +55,12 @@ export async function completeOpenAICompatible(
     if (err instanceof OpenAI.APIError) {
       // Connection errors have no HTTP status → treat as "unreachable" (503).
       const status = err.status ?? 503;
+      if (status === 401 && cfg.provider === "gemini") {
+        throw new AiError(
+          "Gemini rejected the API key. Set AI_API_KEY to an active Gemini API key from Google AI Studio, remove any old AI_BASE_URL, then restart the deployment.",
+          status,
+        );
+      }
       if (status === 429) {
         throw new AiError(rateLimitMessage(cfg.provider, err.headers), status);
       }

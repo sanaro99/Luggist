@@ -96,11 +96,33 @@ export function resolveConfig(): AiConfig {
   const def = PROVIDERS[provider];
   return {
     provider,
-    baseUrl: process.env.AI_BASE_URL?.trim() || def.baseUrl,
+    baseUrl: resolveBaseUrl(provider, def),
     model: process.env.AI_MODEL?.trim() || def.defaultModel,
     apiKey: process.env.AI_API_KEY?.trim() || "",
     jsonMode: def.jsonMode,
     needsApiKey: def.needsApiKey,
     adapter: def.adapter,
   };
+}
+
+/**
+ * Keep a deliberate custom gateway, but don't send a new provider's key to a
+ * known URL left behind by a previous provider configuration.
+ */
+function resolveBaseUrl(provider: ProviderId, def: ProviderDef): string {
+  const override = process.env.AI_BASE_URL?.trim();
+  if (!override) return def.baseUrl;
+
+  const normalizedOverride = normalizeBaseUrl(override);
+  const configuredProvider = (
+    Object.entries(PROVIDERS) as [ProviderId, ProviderDef][]
+  ).find(([, candidate]) => normalizeBaseUrl(candidate.baseUrl) === normalizedOverride)?.[0];
+
+  return configuredProvider && configuredProvider !== provider
+    ? def.baseUrl
+    : override;
+}
+
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, "");
 }
