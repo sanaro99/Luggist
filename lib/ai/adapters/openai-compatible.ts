@@ -20,6 +20,9 @@ export async function completeOpenAICompatible(
   const client = new OpenAI({
     apiKey: cfg.apiKey || "ollama", // local Ollama needs a non-empty placeholder
     baseURL: cfg.baseUrl,
+    // The SDK retries 429s by default. One additional retry gives providers
+    // time to clear short request-per-second limits without retrying forever.
+    maxRetries: 3,
   });
 
   try {
@@ -45,6 +48,9 @@ export async function completeOpenAICompatible(
     if (err instanceof OpenAI.APIError) {
       // Connection errors have no HTTP status → treat as "unreachable" (503).
       const status = err.status ?? 503;
+      if (status === 429) {
+        throw new AiError(rateLimitMessage(cfg.provider, err.headers), status);
+      }
       const where = err.status ? ` (${err.status})` : "";
       throw new AiError(
         `AI provider error${where} from ${cfg.provider}: ${err.message}`.slice(
@@ -59,4 +65,26 @@ export async function completeOpenAICompatible(
       503,
     );
   }
+}
+
+/** Turn a provider's rate-limit response into a safe, helpful UI message. */
+function rateLimitMessage(provider: string, headers: Headers | undefined): string {
+  const retryAfter = retryAfterSeconds(headers?.get("retry-after"));
+  const wait = retryAfter
+    ? ` Try again in about ${retryAfter} ${retryAfter === 1 ? "second" : "seconds"}.`
+    : " Please wait a moment and try again.";
+  const providerName = provider === "mistral" ? "Mistral" : "The AI provider";
+  return `${providerName} has reached its request or token limit.${wait} If this keeps happening, check the provider account's rate limits or available credits.`;
+}
+
+/** `Retry-After` may be an integer delay or an HTTP date. */
+function retryAfterSeconds(value: string | null | undefined): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds);
+
+  const retryAt = Date.parse(value);
+  if (!Number.isFinite(retryAt)) return undefined;
+  const delay = Math.ceil((retryAt - Date.now()) / 1_000);
+  return delay > 0 ? delay : undefined;
 }
