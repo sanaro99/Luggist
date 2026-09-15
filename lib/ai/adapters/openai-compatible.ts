@@ -1,5 +1,5 @@
 // Server-only. Adapter for any provider that speaks the OpenAI-compatible
-// /chat/completions protocol — Mistral, OpenAI, DeepSeek, and Ollama all do.
+// /chat/completions protocol — Gemini, Mistral, OpenAI, DeepSeek, and Ollama all do.
 // Uses the official `openai` SDK with a per-provider base URL, so we get a
 // typed, maintained client (retries, JSON mode) without hand-rolling HTTP.
 
@@ -28,11 +28,13 @@ export async function completeOpenAICompatible(
   try {
     const completion = await client.chat.completions.create({
       model: cfg.model,
-      temperature: 0.3,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
       ],
+      // Gemini 3 deprecates sampling parameters; the other providers still
+      // use a lower temperature for predictable JSON-shaped responses.
+      ...(cfg.provider === "gemini" ? {} : { temperature: 0.3 }),
       // Only ask for JSON mode where the provider supports it; local models that
       // ignore it are handled by the extraction fallback in chat.ts.
       ...(cfg.jsonMode
@@ -73,7 +75,12 @@ function rateLimitMessage(provider: string, headers: Headers | undefined): strin
   const wait = retryAfter
     ? ` Try again in about ${retryAfter} ${retryAfter === 1 ? "second" : "seconds"}.`
     : " Please wait a moment and try again.";
-  const providerName = provider === "mistral" ? "Mistral" : "The AI provider";
+  const providerName =
+    provider === "mistral"
+      ? "Mistral"
+      : provider === "gemini"
+        ? "Gemini"
+        : "The AI provider";
   return `${providerName} has reached its request or token limit.${wait} If this keeps happening, check the provider account's rate limits or available credits.`;
 }
 
