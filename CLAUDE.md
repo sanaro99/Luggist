@@ -48,7 +48,7 @@ These take precedence over convenience. When in doubt, follow them.
 - `npm run lint` — ESLint. `npx tsc --noEmit` — type-check only.
 - `node scripts/gen-icons.mjs` — regenerate the PWA icons.
 - **AI features** need a provider configured: copy `.env.example` → `.env.local`
-  and set `AI_API_KEY` (default provider Mistral). Local Ollama works key-free
+  and set `AI_API_KEY` (default provider Gemini). Local Ollama works key-free
   (`AI_PROVIDER=ollama`). Without config, the app still runs — AI-assist falls
   back to offline heuristics.
 
@@ -76,10 +76,10 @@ These take precedence over convenience. When in doubt, follow them.
 - **AI gateway** (`app/api/ai/route.ts`, `lib/ai/*`): one Node route, one
   `switch` over tasks (`generateList`, `audit`, `parseQuickAdd`, `categorize`).
   Provider config is **env-only** (`AI_PROVIDER` / `AI_MODEL` / `AI_BASE_URL` /
-  `AI_API_KEY`; see `.env.example`), default Mistral. `lib/ai/chat.ts` dispatches
-  to a client adapter; Mistral/OpenAI/DeepSeek/Ollama all share the
+  `AI_API_KEY`; see `.env.example`), default Gemini. `lib/ai/chat.ts` dispatches
+  to a client adapter; Gemini/Mistral/OpenAI/DeepSeek/Ollama all share the
   `openai-compatible` adapter (official `openai` SDK with a swapped `baseURL`).
-  Add a non-compatible provider (Anthropic, Gemini) by registering a new
+  Add a non-compatible provider (for example, Anthropic) by registering a new
   `AdapterId` + adapter — nothing else changes. `lib/ai/client.ts` is the only
   AI module a client component imports (it just `fetch`es `/api/ai`) and holds
   the offline heuristics (`parseQuickAddOffline`, `categorizeOffline`) so

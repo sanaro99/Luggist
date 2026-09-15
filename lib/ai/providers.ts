@@ -1,11 +1,11 @@
 // Server-only. Provider registry + env-driven config for the AI gateway.
 // NEVER import this from a client component — it reads secret env vars.
 //
-// All four providers expose an OpenAI-compatible `/chat/completions` endpoint,
+// All five providers expose an OpenAI-compatible `/chat/completions` endpoint,
 // so a single client (configurable base URL + model + key) covers them. Add a
 // new provider by extending PROVIDERS — nothing else needs to change.
 
-export type ProviderId = "mistral" | "openai" | "deepseek" | "ollama";
+export type ProviderId = "gemini" | "mistral" | "openai" | "deepseek" | "ollama";
 
 /**
  * Which client adapter speaks to a provider. The four providers below all use
@@ -27,9 +27,21 @@ interface ProviderDef {
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
+  gemini: {
+    // Google's documented OpenAI-compatible Gemini API endpoint.
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    // Stable, low-latency model with structured output for Luggist's small
+    // packing-list and classification tasks; no heavy reasoning is needed.
+    defaultModel: "gemini-3.5-flash-lite",
+    jsonMode: true,
+    needsApiKey: true,
+    adapter: "openai-compatible",
+  },
   mistral: {
     baseUrl: "https://api.mistral.ai/v1",
-    defaultModel: "mistral-small-latest",
+    // Mistral Small 4 (March 2026): the current GA replacement for Small 3.2.
+    // Pin the model instead of a moving alias so deployments are predictable.
+    defaultModel: "mistral-small-2603",
     jsonMode: true,
     needsApiKey: true,
     adapter: "openai-compatible",
@@ -68,13 +80,19 @@ export interface AiConfig {
 }
 
 function isProviderId(v: string | undefined): v is ProviderId {
-  return v === "mistral" || v === "openai" || v === "deepseek" || v === "ollama";
+  return (
+    v === "gemini" ||
+    v === "mistral" ||
+    v === "openai" ||
+    v === "deepseek" ||
+    v === "ollama"
+  );
 }
 
 /** Reads the AI_* env vars, falling back to the provider's defaults. */
 export function resolveConfig(): AiConfig {
   const envProvider = process.env.AI_PROVIDER?.trim().toLowerCase();
-  const provider: ProviderId = isProviderId(envProvider) ? envProvider : "mistral";
+  const provider: ProviderId = isProviderId(envProvider) ? envProvider : "gemini";
   const def = PROVIDERS[provider];
   return {
     provider,
