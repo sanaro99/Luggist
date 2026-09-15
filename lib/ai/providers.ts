@@ -29,7 +29,9 @@ interface ProviderDef {
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
   mistral: {
     baseUrl: "https://api.mistral.ai/v1",
-    defaultModel: "mistral-small-latest",
+    // Mistral Small 4 (March 2026): the current GA replacement for Small 3.2.
+    // Pin the model instead of a moving alias so deployments are predictable.
+    defaultModel: "mistral-small-2603",
     jsonMode: true,
     needsApiKey: true,
     adapter: "openai-compatible",
